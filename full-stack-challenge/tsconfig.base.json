@@ -18,7 +18,9 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "paths": {}
+    "paths": {
+      "@dynapredict/shared-types": ["./packages/shared-types/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
