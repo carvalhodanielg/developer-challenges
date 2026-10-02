@@ -62,6 +62,26 @@ All API routes use the prefix `/api/v1`. Full endpoint list: `PLAN.md` §4.
 - **Latency budget is under 350 ms per request.** Keep `select`/`include` explicit, always paginate, and rely on the indexes. When you touch `/monitoring-points` or `/readings`, re-check that their latency still fits.
 - Deleting a machine cascades to its monitoring points, sensors, and readings (`onDelete: Cascade`).
 
+## Frontend guidelines
+
+These are requirements, not preferences. Details are in `PLAN.md` §5.
+
+- **Mobile first, always.** Write base styles for the smallest screen (360px), then add `theme.breakpoints.up(...)` overrides for larger ones. Never start desktop-first and patch down with `down(...)`. Wide tables need a mobile layout (horizontal scroll inside the table container, or a card/list view below `md`), and the page itself must never scroll horizontally. Touch targets are at least 44×44px on mobile. The app must be usable from 360px wide up to desktop.
+- **Accessibility (WCAG 2.1 AA).**
+  - Use semantic markup and landmarks (`header`, `nav`, `main`).
+  - Every input has a visible label and announces its errors (`helperText` wired to `aria-describedby`).
+  - Icon-only buttons need an `aria-label`.
+  - Everything works from the keyboard, focus stays visible, and dialogs trap and restore focus.
+  - Text contrast is ≥ 4.5:1 in **both** themes. Colour never carries meaning alone: statuses also get text or an icon.
+  - Respect `prefers-reduced-motion`.
+  - The chart needs a text alternative (an `aria-label` summary, with the metrics visible next to it).
+  - Keep the `jsx-a11y` lint rules on. In tests, query with `getByRole`/`getByLabelText`.
+- **Dark/light mode.**
+  - Build a single MUI 5 theme factory in `theme/` (`createAppTheme(mode)`) and set its `palette.mode`.
+  - Keep the mode in a Redux `uiSlice`. The initial value is the stored choice from `localStorage`, falling back to `prefers-color-scheme`.
+  - A toggle in the AppBar (with an `aria-label`) switches the mode and persists the choice.
+  - Components read colours from the theme (`theme.palette.*`, `sx` tokens). Never hard-code a colour; this also applies to Recharts series and axes.
+
 ## Testing
 
 - **API**: Vitest + supertest against the `postgres-test` compose service.
