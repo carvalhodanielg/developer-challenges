@@ -4,7 +4,7 @@
     "rootDir": ".",
     "sourceMap": true,
     "declaration": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "emitDecoratorMetadata": false,
     "experimentalDecorators": false,
     "importHelpers": true,
@@ -18,7 +18,6 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "baseUrl": ".",
     "paths": {}
   },
   "exclude": ["node_modules", "tmp"]

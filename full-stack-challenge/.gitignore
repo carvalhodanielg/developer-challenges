@@ -42,3 +42,5 @@ cypress/screenshots/
 PLAN.md
 TASKS.md
 decisions.md
+
+vitest.config.*.timestamp*
