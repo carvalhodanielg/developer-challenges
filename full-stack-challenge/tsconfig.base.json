@@ -1,0 +1,25 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": false,
+    "experimentalDecorators": false,
+    "importHelpers": true,
+    "esModuleInterop": true,
+    "target": "es2022",
+    "module": "esnext",
+    "lib": ["es2022"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "baseUrl": ".",
+    "paths": {}
+  },
+  "exclude": ["node_modules", "tmp"]
+}

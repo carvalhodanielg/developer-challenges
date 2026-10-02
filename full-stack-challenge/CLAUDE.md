@@ -1,0 +1,82 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Context
+
+This directory is a solution to the **Dynamox Full-Stack Developer Challenge**. The official spec is `../full-stack-challenge.md`. Read these local planning docs (in Portuguese) before doing any work:
+
+- `PLAN.md`: architecture, data model, API surface, testing, deploy, and CI. It is the source of truth for technical decisions. (It refers to the task list as `ROADMAP.md`, but the file is `TASKS.md`.)
+- `TASKS.md`: atomic tasks grouped by day (`T1.1`, `T2.4`, …). Work through one task at a time, give each task its own semantic commit, and tick its checkbox when it's done.
+- `decisions.md`: ADR-style log with title, context, options considered, decision, and rationale. Tasks tagged **[decisions.md]** must add an entry. Record any new architectural decision on the day it's made.
+
+The Nx workspace has not been scaffolded yet (see T1.2–T1.5). Until it exists, the commands below are planned rather than verified.
+
+## Commands (Nx)
+
+```bash
+docker compose up -d postgres postgres-test   # dev DB + ephemeral test DB
+npx nx serve api                               # Express API
+npx nx serve web                               # Vite frontend
+npx nx run-many -t test [--coverage]           # all unit tests (Vitest)
+npx nx test api -- -t "<test name>"            # single test by name (Vitest filter)
+npx nx affected -t lint typecheck build        # same gates as CI
+npx nx e2e web-e2e                             # Cypress (local only, not a CI gate)
+npx prisma migrate dev --schema apps/api/prisma/schema.prisma
+npx prisma db seed                             # demo machines/points/sensors/readings
+docker compose up                              # full stack: postgres + api + web
+```
+
+## Architecture
+
+Nx integrated monorepo:
+
+- **`apps/api`**: Express + TypeScript + Prisma (PostgreSQL). Code is organized by feature under `src/modules/{auth,machines,monitoring-points,sensors,readings}`, each module split into controller, service, and routes. Shared pieces:
+  - `middlewares/`: `auth` (JWT cookie), `validate(schema, source)` (zod), and the central `errorHandler`.
+  - `errors/AppError`.
+  - `lib/prisma.ts` (singleton) and `lib/pagination.ts`.
+  - `config/env.ts`, which validates the required env vars at boot.
+- **`apps/web`**: Vite + React + TS + MUI 5 + Redux Toolkit. Async work uses **hand-written thunks (`createAsyncThunk`), not RTK Query or Saga**. Shared pieces:
+  - `features/<name>/`: a slice plus its thunks.
+  - `services/apiClient.ts`: axios with `withCredentials: true`. Its 401 interceptor dispatches logout. Each module also has its own `*Api.ts`.
+  - `layouts/PrivateRoute`: gates routes on `authSlice.status`.
+  - Reusable components: `DataTable<T>`, `FormDialog`, `ConfirmDialog`, `TimeSeriesChart` (Recharts), and `MetricsCards`.
+  - Forms use react-hook-form.
+- **`packages/shared-types`**: the `MachineType` and `SensorModel` enums plus DTOs, used by both apps. Prisma can't name an enum value `HF+`, so the DB stores `HFPlus` and shared-types maps it to `"HF+"` for display and the API.
+- **`apps/web-e2e`**: Cypress.
+
+All API routes use the prefix `/api/v1`. Full endpoint list: `PLAN.md` §4.
+
+## Invariants and non-obvious rules
+
+- **Auth**: there is no `User` table. The single fixed login comes from the env vars `AUTH_EMAIL` and `AUTH_PASSWORD_HASH` (a bcrypt hash). The JWT lives in an httpOnly, secure cookie, and on app boot `GET /auth/me` hydrates Redux. In production the frontend (Vercel) and API (Render) are on different domains, so the cookie needs `SameSite=None; Secure` and CORS needs `credentials: true`.
+- **Sensor identity**: `id` is a system-generated uuid primary key. `serialNumber` is entered by the user, represents the physical sensor label, and is also unique. A duplicate `serialNumber` returns 409. `MonitoringPoint` to `Sensor` is **1:1**: `monitoringPointId` is `@unique`.
+- **TcAg/TcAs are not allowed on Pump machines.** The application layer enforces this in `sensors.service.ts` through `assertSensorCompatibleWithMachine`; there is no DB constraint. A violation returns **422**. Tests must cover all 6 machine × sensor combinations. The UI mirrors the rule for UX, but the backend is authoritative.
+- **Error mapping** happens in one place, `errorHandler`: Prisma P2025 → 404, P2002 → 409, zod → 400, anything else → 500. Throw an `AppError` instead of writing responses from inside services.
+- **Monitoring-point listing** (`GET /monitoring-points`):
+  - Pagination is server-side, with `pageSize` 5.
+  - `sortBy` must be one of `machineName | machineType | pointName | sensorModel`. The `orderBy` is built from that whitelist and never comes straight from user input.
+  - The query is a single `prisma.$transaction([findMany, count])` that includes `machine` and `sensor`.
+  - The response shape is `{data, meta: {page, pageSize, total, totalPages}}`.
+- **Time series**: readings go in a plain `Reading` table indexed on `(sensorId, timestamp)`. There is no TimescaleDB. Bulk inserts use `createMany`, and metrics (min/max/avg) use `aggregate`. Prediction is a backend endpoint: a moving average (`?window=N`) is the baseline, and linear regression is a stretch goal.
+- **Latency budget is under 350 ms per request.** Keep `select`/`include` explicit, always paginate, and rely on the indexes. When you touch `/monitoring-points` or `/readings`, re-check that their latency still fits.
+- Deleting a machine cascades to its monitoring points, sensors, and readings (`onDelete: Cascade`).
+
+## Testing
+
+- **API**: Vitest + supertest against the `postgres-test` compose service.
+- **Web**: Vitest + React Testing Library, covering reducers, `DataTable`, dialogs, `PrivateRoute`, and form validation.
+- Coverage thresholds of 70–80% are set in each project's `vitest.config.ts`.
+
+## CI / deploy
+
+- **`.github/workflows/ci.yml`** gates on lint+typecheck, build, and tests with coverage. A SonarCloud quality gate then reads the lcov report. Cypress is deliberately not a gate.
+- **Docker** (multi-stage `api`/`web` Dockerfiles plus `docker-compose.yml`) is for dev and CI only. Production runs native builds: Neon (Postgres), Render (API), and Vercel (web, via `VITE_API_URL`).
+- Out of scope: load balancer and load tests.
+
+## Conventions
+
+- Use atomic **Conventional Commits** (`feat:`, `fix:`, `test:`, `chore:`, `docs:`, `refactor:`). The challenge grades commit quality. You dont commit anything, you can reccomend, though.
+- Work on branch `daniel-goncalves`. The final PR targets `main` of the Dynamox repo.
+- Document every assumption about ambiguous requirements in `README.md`, along with setup steps, env vars, the fixed credentials, and the deploy link.
+- Everytime a task is finish, check the @TASKS.md and check it done if it comes from there.
