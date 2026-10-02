@@ -46,3 +46,6 @@ decisions.md
 vitest.config.*.timestamp*
 
 vite.config.*.timestamp*
+
+# Prisma generated client
+apps/api/src/generated/
