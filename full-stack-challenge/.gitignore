@@ -44,3 +44,5 @@ TASKS.md
 decisions.md
 
 vitest.config.*.timestamp*
+
+vite.config.*.timestamp*
