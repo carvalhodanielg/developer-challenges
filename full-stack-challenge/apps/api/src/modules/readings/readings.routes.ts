@@ -1,11 +1,21 @@
 import { Router } from 'express';
 import { validate } from '../../middlewares/validate';
 import * as readingsController from './readings.controller';
-import { createReadingsSchema, sensorIdParams } from './readings.schemas';
+import {
+  createReadingsSchema,
+  listReadingsQuery,
+  sensorIdParams,
+} from './readings.schemas';
 
 /** Mounted at /sensors/:sensorId/readings (needs the parent param). */
 export const sensorReadingsRoutes = Router({ mergeParams: true });
 
+sensorReadingsRoutes.get(
+  '/',
+  validate(sensorIdParams, 'params'),
+  validate(listReadingsQuery, 'query'),
+  readingsController.list,
+);
 sensorReadingsRoutes.post(
   '/',
   validate(sensorIdParams, 'params'),

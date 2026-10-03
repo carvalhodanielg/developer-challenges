@@ -108,3 +108,20 @@ export interface CreateReadingsResultDto {
   /** Readings skipped because the sensor already had one at that timestamp. */
   duplicates: number;
 }
+
+export const DEFAULT_READINGS_PAGE_SIZE = 1000;
+export const MAX_READINGS_PAGE_SIZE = 5000;
+
+export interface ReadingDto {
+  timestamp: string;
+  value: number;
+}
+
+/**
+ * A page of a sensor's series in ascending time. Pass `nextCursor` as `after`
+ * to get the next page; it is null on the last one.
+ */
+export interface ReadingsPageDto {
+  data: ReadingDto[];
+  meta: { limit: number; nextCursor: string | null };
+}
