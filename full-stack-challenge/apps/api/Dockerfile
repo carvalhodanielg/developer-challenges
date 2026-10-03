@@ -47,5 +47,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER node
 EXPOSE 3333
+# /health answers 503 when the database is unreachable, and busybox wget exits
+# non-zero on it. start-period covers `migrate deploy` in the entrypoint.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-3333}/api/v1/health" || exit 1
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "main.js"]

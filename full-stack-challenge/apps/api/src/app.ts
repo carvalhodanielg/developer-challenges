@@ -6,6 +6,7 @@ import { AppError } from './errors/AppError';
 import { errorHandler } from './middlewares/errorHandler';
 import { requireAuth } from './middlewares/requireAuth';
 import { authRoutes } from './modules/auth/auth.routes';
+import { healthRoutes } from './modules/health/health.routes';
 import { machinesRoutes } from './modules/machines/machines.routes';
 import {
   machineMonitoringPointsRoutes,
@@ -27,9 +28,7 @@ export function createApp() {
   app.use(cookieParser());
 
   const api = express.Router();
-  api.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
-  });
+  api.use('/health', healthRoutes);
   api.use('/auth', authRoutes);
   // Private routers: requireAuth per router keeps unknown paths a 404.
   api.use(
