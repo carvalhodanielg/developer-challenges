@@ -11,6 +11,10 @@ import {
   machineMonitoringPointsRoutes,
   monitoringPointsRoutes,
 } from './modules/monitoring-points/monitoring-points.routes';
+import {
+  pointSensorRoutes,
+  sensorsRoutes,
+} from './modules/sensors/sensors.routes';
 
 export function createApp() {
   const app = express();
@@ -34,7 +38,9 @@ export function createApp() {
     machineMonitoringPointsRoutes,
   );
   api.use('/machines', requireAuth, machinesRoutes);
+  api.use('/monitoring-points/:pointId/sensor', requireAuth, pointSensorRoutes);
   api.use('/monitoring-points', requireAuth, monitoringPointsRoutes);
+  api.use('/sensors', requireAuth, sensorsRoutes);
   app.use('/api/v1', api);
 
   app.use((req) => {

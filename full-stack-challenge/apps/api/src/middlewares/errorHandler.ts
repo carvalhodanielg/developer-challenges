@@ -2,6 +2,7 @@ import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '../generated/prisma/client';
 import { AppError } from '../errors/AppError';
+import { uniqueViolationFields } from '../lib/prismaErrors';
 
 export interface ErrorResponseBody {
   error: {
@@ -31,7 +32,7 @@ function fromPrisma(error: Prisma.PrismaClientKnownRequestError) {
     // Unique constraint, e.g. a duplicate Sensor.serialNumber.
     case 'P2002':
       return AppError.conflict('Resource already exists', {
-        fields: (error.meta as { target?: unknown } | undefined)?.target,
+        fields: uniqueViolationFields(error),
       });
     default:
       return undefined;

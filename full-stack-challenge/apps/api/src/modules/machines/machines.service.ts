@@ -7,6 +7,7 @@ import {
   sensorModelToKey,
 } from '@dynapredict/shared-types';
 import { AppError } from '../../errors/AppError';
+import { lockMachine } from '../../lib/locks';
 import { pageArgs, paginationMeta } from '../../lib/pagination';
 import { prisma } from '../../lib/prisma';
 import type { ListMachinesQuery, MachineInput } from './machines.schemas';
@@ -125,14 +126,15 @@ export async function createMachine(input: MachineInput): Promise<MachineDto> {
 
 /**
  * Changing a machine's type must not leave it with sensors the new type
- * forbids (e.g. Fan -> Pump while a TcAg is attached). The check and the update
- * share a transaction so a sensor can't be attached in between.
+ * forbids (e.g. Fan -> Pump while a TcAg is attached). The machine lock makes
+ * the check and the update atomic with respect to attachSensor.
  */
 export async function updateMachine(
   id: string,
   input: MachineInput,
 ): Promise<MachineDto> {
   return prisma.$transaction(async (tx) => {
+    await lockMachine(tx, id);
     const current = await tx.machine.findUnique({
       where: { id },
       select: { type: true },

@@ -56,6 +56,7 @@ All API routes use the prefix `/api/v1`. Full endpoint list: `PLAN.md` §4.
 - **TcAg/TcAs are not allowed on Pump machines.** The rule is defined once, as `isSensorCompatibleWithMachine`/`disallowedSensorModels` in `packages/shared-types/src/rules.ts`. The API enforces it, and the web app imports the same functions only for UX; the backend is authoritative. There is no DB constraint, and a violation returns **422**. Two code paths must enforce it:
   - attaching a sensor: `assertSensorCompatibleWithMachine` in `sensors.service.ts`;
   - changing a machine's type in `machines.service.ts` `updateMachine`, which checks inside a transaction for sensors the new type forbids.
+  - Both paths must call `lockMachine(tx, machineId)` (`lib/locks.ts`, `SELECT … FOR UPDATE`) at the start of their transaction. A plain transaction is not enough under READ COMMITTED: a concurrent type change and attach can both pass their checks. `sensors.spec.ts` has a race test that fails without the lock.
   - Tests must cover all 6 machine × sensor combinations.
 - **Error mapping** happens in one place, `errorHandler`: Prisma P2025 → 404, P2002 → 409, zod → 400, anything else → 500. Throw an `AppError` instead of writing responses from inside services.
 - **Monitoring-point listing** (`GET /monitoring-points`):
@@ -65,7 +66,7 @@ All API routes use the prefix `/api/v1`. Full endpoint list: `PLAN.md` §4.
   - The response shape is `{data, meta: {page, pageSize, total, totalPages}}`.
 - **Time series**: readings go in a plain `Reading` table indexed on `(sensorId, timestamp)`. There is no TimescaleDB. Bulk inserts use `createMany`, and metrics (min/max/avg) use `aggregate`. Prediction is a backend endpoint: a moving average (`?window=N`) is the baseline, and linear regression is a stretch goal.
 - **Latency budget is under 350 ms per request.** Keep `select`/`include` explicit, always paginate, and rely on the indexes. When you touch `/monitoring-points` or `/readings`, re-check that their latency still fits.
-- Deleting a machine cascades to its monitoring points, sensors, and readings (`onDelete: Cascade`).
+- **Deletes are physical (hard delete), never soft delete** (`decisions.md` #28). Deleting a machine cascades to its monitoring points, sensors, and readings (`onDelete: Cascade`). Deleting a point cascades to its sensor and readings, and removing a sensor deletes its readings. Do not add `deletedAt`/`archivedAt` filters. The UI's `ConfirmDialog` must state what the cascade will erase.
 
 ## Frontend guidelines
 

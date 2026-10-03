@@ -87,10 +87,28 @@ describe('errorHandler', () => {
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
 
-  it('maps Prisma P2002 (unique constraint) to 409 with the fields', async () => {
-    const res = await request(
-      appThrowing(prismaError('P2002', { target: ['serialNumber'] })),
-    ).post('/boom');
+  it.each([
+    ['the native engine shape', { target: ['serialNumber'] }],
+    [
+      // Captured from @prisma/adapter-pg, which has no meta.target.
+      'the driver adapter shape',
+      {
+        modelName: 'Sensor',
+        driverAdapterError: {
+          name: 'DriverAdapterError',
+          cause: {
+            originalCode: '23505',
+            kind: 'UniqueConstraintViolation',
+            constraint: { index: 'Sensor_serialNumber_key' },
+            table: 'Sensor',
+          },
+        },
+      },
+    ],
+  ])('maps Prisma P2002 in %s to 409 with the fields', async (_, meta) => {
+    const res = await request(appThrowing(prismaError('P2002', meta))).post(
+      '/boom',
+    );
 
     expect(res.status).toBe(409);
     expect(res.body.error).toEqual({
