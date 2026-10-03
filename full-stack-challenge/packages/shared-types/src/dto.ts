@@ -40,6 +40,14 @@ export interface MonitoringPointSummaryDto {
   updatedAt: string;
 }
 
+export interface MonitoringPointDto extends MonitoringPointSummaryDto {
+  machineId: string;
+}
+
+export interface MonitoringPointInput {
+  name: string;
+}
+
 export interface MachineDto {
   id: string;
   name: string;

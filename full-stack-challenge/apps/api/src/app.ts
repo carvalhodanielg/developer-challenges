@@ -7,6 +7,10 @@ import { errorHandler } from './middlewares/errorHandler';
 import { requireAuth } from './middlewares/requireAuth';
 import { authRoutes } from './modules/auth/auth.routes';
 import { machinesRoutes } from './modules/machines/machines.routes';
+import {
+  machineMonitoringPointsRoutes,
+  monitoringPointsRoutes,
+} from './modules/monitoring-points/monitoring-points.routes';
 
 export function createApp() {
   const app = express();
@@ -24,7 +28,13 @@ export function createApp() {
   });
   api.use('/auth', authRoutes);
   // Private routers: requireAuth per router keeps unknown paths a 404.
+  api.use(
+    '/machines/:machineId/monitoring-points',
+    requireAuth,
+    machineMonitoringPointsRoutes,
+  );
   api.use('/machines', requireAuth, machinesRoutes);
+  api.use('/monitoring-points', requireAuth, monitoringPointsRoutes);
   app.use('/api/v1', api);
 
   app.use((req) => {
