@@ -19,7 +19,7 @@ export function logout(_req: Request, res: Response) {
   res.status(204).end();
 }
 
-export function me(req: Request, res: Response) {
-  const user = authService.verifyToken(req.cookies?.[AUTH_COOKIE_NAME]);
-  res.json({ user });
+// Mounted behind requireAuth, which has already verified the session.
+export function me(_req: Request, res: Response) {
+  res.json({ user: res.locals.user });
 }
