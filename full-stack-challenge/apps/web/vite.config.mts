@@ -42,6 +42,11 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../coverage/apps/web',
       provider: 'v8' as const,
+      // lcov feeds SonarCloud, which resolves paths from the workspace root.
+      reporter: [
+        'text-summary',
+        ['lcov', { projectRoot: '../..' }] as ['lcov', { projectRoot: string }],
+      ],
     },
   },
 }));

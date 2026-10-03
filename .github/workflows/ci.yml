@@ -95,8 +95,39 @@ jobs:
       - run: npx prisma generate
       - run: npx nx affected -t build
 
+  test:
+    name: Test & coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: full-stack-challenge/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      # The same ephemeral database used locally (tmpfs, port 5433). The API's
+      # vitest.global-setup.ts applies the migrations before the first test.
+      - run: docker compose up -d --wait postgres-test
+
+      # Every project, not just affected ones: SonarCloud needs the full lcov
+      # on each run. The coverage thresholds in each vitest config gate here.
+      - run: npx nx run-many -t test --coverage --skip-nx-cache
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: full-stack-challenge/coverage/apps/*/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
   sonarcloud:
     name: SonarCloud
+    needs: test
     runs-on: ubuntu-latest
     # Forked PRs don't receive secrets, so the scan would always fail there.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -105,8 +136,13 @@ jobs:
         with:
           fetch-depth: 0 # SonarCloud needs full history for blame and new-code detection
 
-      # TODO(T2.10): depend on the test job and download its lcov reports
-      # into full-stack-challenge/coverage before scanning.
+      # Restores coverage/apps/{api,web}/lcov.info, the paths that
+      # sonar-project.properties reads.
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage
+          path: full-stack-challenge/coverage/apps
+
       - uses: SonarSource/sonarqube-scan-action@v8
         with:
           projectBaseDir: full-stack-challenge
