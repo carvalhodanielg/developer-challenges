@@ -8,16 +8,18 @@ datasource db {
   provider = "postgresql"
 }
 
+// Enum values are declared in alphabetical order on purpose: PostgreSQL sorts
+// enums by declaration order, and the listings sort by these columns.
 enum MachineType {
-  Pump
   Fan
+  Pump
 }
 
 // "HF+" is not a valid Prisma identifier; shared-types maps HFPlus <-> "HF+".
 enum SensorModel {
+  HFPlus
   TcAg
   TcAs
-  HFPlus
 }
 
 model Machine {

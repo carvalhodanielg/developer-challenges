@@ -6,6 +6,13 @@ import { prisma } from '../../lib/prisma';
 const app = createApp();
 const cookie = authCookie();
 
+function listPoints(query: Record<string, string | number> = {}) {
+  return request(app)
+    .get('/api/v1/monitoring-points')
+    .query(query)
+    .set('Cookie', cookie);
+}
+
 function createPoint(machineId: string, body: object) {
   return request(app)
     .post(`/api/v1/machines/${machineId}/monitoring-points`)
@@ -30,6 +37,60 @@ function createMachine() {
   return prisma.machine.create({ data: { name: 'Bomba 01', type: 'Pump' } });
 }
 
+/**
+ * Six points chosen so every sort column, in both directions, yields a
+ * distinct order: names tie within a machine, types tie across machines, and
+ * two points have no sensor. Point names are unique, so tests compare them.
+ */
+async function seedListingFixture() {
+  const fixture = [
+    {
+      machine: 'Alpha',
+      type: 'Fan',
+      points: [
+        ['P3', 'TcAs'],
+        ['P5', 'HFPlus'],
+      ],
+    },
+    {
+      machine: 'Bravo',
+      type: 'Pump',
+      points: [
+        ['P1', 'HFPlus'],
+        ['P6', null],
+      ],
+    },
+    {
+      machine: 'Charlie',
+      type: 'Fan',
+      points: [
+        ['P2', null],
+        ['P4', 'TcAg'],
+      ],
+    },
+  ] as const;
+  for (const { machine, type, points } of fixture) {
+    await prisma.machine.create({
+      data: {
+        name: machine,
+        type,
+        monitoringPoints: {
+          create: points.map(([name, model]) => ({
+            name,
+            sensor: model
+              ? { create: { serialNumber: `SN-${name}`, model } }
+              : undefined,
+          })),
+        },
+      },
+    });
+  }
+}
+
+function pointNames(res: request.Response): string[] {
+  return res.body.data.map((point: { name: string }) => point.name);
+}
+
 /** A point on a new machine, with an HF+ sensor that has one reading. */
 async function pointWithSensorAndReading() {
   const machine = await createMachine();
@@ -52,16 +113,144 @@ afterAll(() => prisma.$disconnect());
 
 describe('monitoring point routes', () => {
   it.each([
+    ['GET', '/api/v1/monitoring-points'],
     ['POST', `/api/v1/machines/${UNKNOWN_ID}/monitoring-points`],
     ['PUT', `/api/v1/monitoring-points/${UNKNOWN_ID}`],
     ['DELETE', `/api/v1/monitoring-points/${UNKNOWN_ID}`],
   ])('%s %s requires a session', async (method, path) => {
     const res =
-      await request(app)[method.toLowerCase() as 'post' | 'put' | 'delete'](
-        path,
-      );
+      await request(app)[
+        method.toLowerCase() as 'get' | 'post' | 'put' | 'delete'
+      ](path);
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/v1/monitoring-points', () => {
+  it('returns the first 5 points by machine name, with machine and sensor', async () => {
+    await seedListingFixture();
+
+    const res = await listPoints();
+
+    expect(res.status).toBe(200);
+    expect(res.body.meta).toEqual({
+      page: 1,
+      pageSize: 5,
+      total: 6,
+      totalPages: 2,
+    });
+    expect(pointNames(res)).toEqual(['P3', 'P5', 'P1', 'P6', 'P2']);
+    expect(res.body.data[0]).toEqual({
+      id: expect.any(String),
+      name: 'P3',
+      machine: { id: expect.any(String), name: 'Alpha', type: 'Fan' },
+      sensor: {
+        id: expect.any(String),
+        serialNumber: 'SN-P3',
+        model: 'TcAs',
+        monitoringPointId: res.body.data[0].id,
+        createdAt: expect.any(String),
+      },
+      createdAt: expect.any(String),
+      updatedAt: expect.any(String),
+    });
+    expect(res.body.data[3].sensor).toBeNull();
+  });
+
+  it('returns the remaining points on the last page without overlap', async () => {
+    await seedListingFixture();
+
+    const res = await listPoints({ page: 2 });
+
+    expect(res.status).toBe(200);
+    expect(pointNames(res)).toEqual(['P4']);
+    expect(res.body.meta).toMatchObject({ page: 2, total: 6, totalPages: 2 });
+  });
+
+  it('returns an empty page past the last one', async () => {
+    await seedListingFixture();
+
+    const res = await listPoints({ page: 3 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.meta).toMatchObject({ page: 3, total: 6, totalPages: 2 });
+  });
+
+  it('honours a custom page size', async () => {
+    await seedListingFixture();
+
+    const res = await listPoints({ pageSize: 2, page: 3 });
+
+    expect(pointNames(res)).toEqual(['P2', 'P4']);
+    expect(res.body.meta).toEqual({
+      page: 3,
+      pageSize: 2,
+      total: 6,
+      totalPages: 3,
+    });
+  });
+
+  it('returns an empty list when there are no points', async () => {
+    const res = await listPoints();
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      data: [],
+      meta: { page: 1, pageSize: 5, total: 0, totalPages: 0 },
+    });
+  });
+
+  // Ties fall back to machine name, then point name. Enums sort
+  // alphabetically (Fan < Pump, HF+ < TcAg < TcAs); points without a sensor
+  // come last in asc and first in desc.
+  it.each([
+    ['machineName', 'asc', ['P3', 'P5', 'P1', 'P6', 'P2', 'P4']],
+    ['machineName', 'desc', ['P2', 'P4', 'P1', 'P6', 'P3', 'P5']],
+    ['machineType', 'asc', ['P3', 'P5', 'P2', 'P4', 'P1', 'P6']],
+    ['machineType', 'desc', ['P1', 'P6', 'P3', 'P5', 'P2', 'P4']],
+    ['pointName', 'asc', ['P1', 'P2', 'P3', 'P4', 'P5', 'P6']],
+    ['pointName', 'desc', ['P6', 'P5', 'P4', 'P3', 'P2', 'P1']],
+    ['sensorModel', 'asc', ['P5', 'P1', 'P4', 'P3', 'P6', 'P2']],
+    ['sensorModel', 'desc', ['P6', 'P2', 'P3', 'P4', 'P5', 'P1']],
+  ])('sorts by %s %s', async (sortBy, sortDir, expected) => {
+    await seedListingFixture();
+
+    const res = await listPoints({ sortBy, sortDir, pageSize: 10 });
+
+    expect(res.status).toBe(200);
+    expect(pointNames(res)).toEqual(expected);
+  });
+
+  it('keeps the sort order across pages', async () => {
+    await seedListingFixture();
+
+    const query = { sortBy: 'pointName', sortDir: 'desc' };
+    const first = await listPoints({ ...query, page: 1 });
+    const second = await listPoints({ ...query, page: 2 });
+
+    expect([...pointNames(first), ...pointNames(second)]).toEqual([
+      'P6',
+      'P5',
+      'P4',
+      'P3',
+      'P2',
+      'P1',
+    ]);
+  });
+
+  it.each([
+    ['an unknown sort field', { sortBy: 'createdAt' }],
+    ['a nested Prisma path as sort field', { sortBy: 'machine.name' }],
+    ['an unknown sort direction', { sortDir: 'up' }],
+    ['page 0', { page: 0 }],
+    ['a non-numeric page', { page: 'abc' }],
+    ['a page size over the maximum', { pageSize: 101 }],
+  ])('rejects %s with 400', async (_, query) => {
+    const res = await listPoints(query);
+
+    expect(res.status).toBe(400);
   });
 });
 

@@ -170,6 +170,17 @@ describe('GET /api/v1/machines', () => {
     expect(names(asc)).toEqual([...names(desc)].reverse());
   });
 
+  it('sorts types alphabetically, not by enum declaration order', async () => {
+    await createMachines(['Pump 1', 'Fan 1']);
+
+    const res = await api().list('?sortBy=type&sortDir=asc');
+
+    expect(res.body.data.map((m: { type: string }) => m.type)).toEqual([
+      'Fan',
+      'Pump',
+    ]);
+  });
+
   it('counts monitoring points per machine', async () => {
     await machineWithSensors('Fan', ['TcAg', null]);
 

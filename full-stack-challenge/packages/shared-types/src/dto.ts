@@ -44,6 +44,20 @@ export interface MonitoringPointDto extends MonitoringPointSummaryDto {
   machineId: string;
 }
 
+/** A row of the global monitoring points listing, with its machine inlined. */
+export interface MonitoringPointListItemDto extends MonitoringPointSummaryDto {
+  machine: Pick<MachineDto, 'id' | 'name' | 'type'>;
+}
+
+export const MONITORING_POINT_SORT_FIELDS = [
+  'machineName',
+  'machineType',
+  'pointName',
+  'sensorModel',
+] as const;
+export type MonitoringPointSortField =
+  (typeof MONITORING_POINT_SORT_FIELDS)[number];
+
 export interface MonitoringPointInput {
   name: string;
 }

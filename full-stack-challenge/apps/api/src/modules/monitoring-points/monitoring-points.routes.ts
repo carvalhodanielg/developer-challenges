@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../middlewares/validate';
 import * as monitoringPointsController from './monitoring-points.controller';
 import {
+  listMonitoringPointsQuery,
   machineIdParams,
   monitoringPointIdParams,
   monitoringPointInputSchema,
@@ -10,6 +11,11 @@ import {
 /** Mounted at /monitoring-points. */
 export const monitoringPointsRoutes = Router();
 
+monitoringPointsRoutes.get(
+  '/',
+  validate(listMonitoringPointsQuery, 'query'),
+  monitoringPointsController.list,
+);
 monitoringPointsRoutes.put(
   '/:id',
   validate(monitoringPointIdParams, 'params'),

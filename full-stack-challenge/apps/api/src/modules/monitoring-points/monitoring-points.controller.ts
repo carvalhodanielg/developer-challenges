@@ -1,8 +1,19 @@
 import type { Request, Response } from 'express';
-import type { MonitoringPointInput } from './monitoring-points.schemas';
+import type {
+  ListMonitoringPointsQuery,
+  MonitoringPointInput,
+} from './monitoring-points.schemas';
 import * as monitoringPointsService from './monitoring-points.service';
 
-// Params and body were already parsed by validate() in the routes.
+// Params, query and body were already parsed by validate() in the routes.
+
+export async function list(req: Request, res: Response) {
+  res.json(
+    await monitoringPointsService.listMonitoringPoints(
+      req.query as unknown as ListMonitoringPointsQuery,
+    ),
+  );
+}
 
 export async function create(
   req: Request<{ machineId: string }>,
