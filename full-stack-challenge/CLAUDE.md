@@ -86,7 +86,7 @@ These are requirements, not preferences. Details are in `PLAN.md` §5.
 
 ## Testing
 
-- **API**: Vitest + supertest against the `postgres-test` compose service.
+- **API**: Vitest + supertest against the `postgres-test` compose service (start it with `docker compose up -d postgres-test` before running tests). `apps/api/vitest.setup.ts` sets a fixed test environment and never reads `.env`. `DATABASE_URL` points at port 5433 unless `TEST_DATABASE_URL` overrides it. Validate the environment only through `config/env.ts` (`parseEnv`); never read `process.env` directly elsewhere.
 - **Web**: Vitest + React Testing Library, covering reducers, `DataTable`, dialogs, `PrivateRoute`, and form validation.
 - Coverage thresholds of 70–80% are set in each project's `vitest.config.ts`.
 
