@@ -128,6 +128,19 @@ describe('errorHandler', () => {
     expect(res.body.error.code).toBe('BAD_REQUEST');
   });
 
+  it('maps a body over the size limit to 413', async () => {
+    const res = await request(appThrowing(new Error('unreachable')))
+      .post('/boom')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ blob: 'x'.repeat(300 * 1024) }));
+
+    expect(res.status).toBe(413);
+    expect(res.body.error).toEqual({
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Request body is too large',
+    });
+  });
+
   describe('unexpected errors', () => {
     beforeEach(() => {
       vi.spyOn(console, 'error').mockImplementation(() => undefined);

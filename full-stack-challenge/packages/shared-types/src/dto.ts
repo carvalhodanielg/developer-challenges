@@ -85,3 +85,26 @@ export interface MachineInput {
 
 export const MACHINE_SORT_FIELDS = ['name', 'type', 'createdAt'] as const;
 export type MachineSortField = (typeof MACHINE_SORT_FIELDS)[number];
+
+/**
+ * Upper bound for one POST /sensors/:id/readings, sized to keep each request
+ * under the 350 ms latency budget. Larger uploads are sent in chunks.
+ */
+export const MAX_READINGS_PER_REQUEST = 1000;
+
+export interface ReadingInput {
+  /** ISO 8601 with an explicit offset, e.g. 2026-10-03T12:00:00Z. */
+  timestamp: string;
+  value: number;
+}
+
+export interface CreateReadingsInput {
+  readings: ReadingInput[];
+}
+
+export interface CreateReadingsResultDto {
+  received: number;
+  inserted: number;
+  /** Readings skipped because the sensor already had one at that timestamp. */
+  duplicates: number;
+}

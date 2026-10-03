@@ -64,5 +64,7 @@ model Reading {
   timestamp DateTime
   value     Float
 
-  @@index([sensorId, timestamp])
+  // One reading per sensor and instant: re-uploading a batch is idempotent
+  // (createMany skips duplicates). The unique index also serves range queries.
+  @@unique([sensorId, timestamp])
 }

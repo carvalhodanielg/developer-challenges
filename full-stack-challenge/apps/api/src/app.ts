@@ -12,6 +12,7 @@ import {
   machineMonitoringPointsRoutes,
   monitoringPointsRoutes,
 } from './modules/monitoring-points/monitoring-points.routes';
+import { sensorReadingsRoutes } from './modules/readings/readings.routes';
 import {
   pointSensorRoutes,
   sensorsRoutes,
@@ -24,7 +25,9 @@ export function createApp() {
   // credentials: true lets the browser send the auth cookie cross-origin; it
   // requires an explicit origin list, never "*".
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
-  app.use(express.json());
+  // A full readings batch (MAX_READINGS_PER_REQUEST) is ~60kb; the default
+  // 100kb limit leaves too little headroom for long numbers.
+  app.use(express.json({ limit: '256kb' }));
   app.use(cookieParser());
 
   const api = express.Router();
@@ -39,6 +42,7 @@ export function createApp() {
   api.use('/machines', requireAuth, machinesRoutes);
   api.use('/monitoring-points/:pointId/sensor', requireAuth, pointSensorRoutes);
   api.use('/monitoring-points', requireAuth, monitoringPointsRoutes);
+  api.use('/sensors/:sensorId/readings', requireAuth, sensorReadingsRoutes);
   api.use('/sensors', requireAuth, sensorsRoutes);
   app.use('/api/v1', api);
 

@@ -39,12 +39,11 @@ function fromPrisma(error: Prisma.PrismaClientKnownRequestError) {
   }
 }
 
-// body-parser flags malformed JSON with this type instead of a dedicated class.
-function isMalformedJson(error: unknown) {
-  return (
-    error instanceof SyntaxError &&
-    (error as SyntaxError & { type?: string }).type === 'entity.parse.failed'
-  );
+// body-parser tags its errors with a `type` instead of dedicated classes.
+function bodyParserErrorType(error: unknown): string | undefined {
+  return error instanceof Error
+    ? (error as Error & { type?: string }).type
+    : undefined;
 }
 
 function toAppError(error: unknown): AppError | undefined {
@@ -52,7 +51,12 @@ function toAppError(error: unknown): AppError | undefined {
   if (error instanceof ZodError) return fromZod(error);
   if (error instanceof Prisma.PrismaClientKnownRequestError)
     return fromPrisma(error);
-  if (isMalformedJson(error)) return AppError.badRequest('Malformed JSON body');
+  switch (bodyParserErrorType(error)) {
+    case 'entity.parse.failed':
+      return AppError.badRequest('Malformed JSON body');
+    case 'entity.too.large':
+      return AppError.payloadTooLarge('Request body is too large');
+  }
   return undefined;
 }
 

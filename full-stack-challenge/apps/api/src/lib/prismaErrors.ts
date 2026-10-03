@@ -10,6 +10,16 @@ export function isUniqueViolation(
   );
 }
 
+/** A write referenced a row that doesn't exist (e.g. an unknown sensorId). */
+export function isForeignKeyViolation(
+  error: unknown,
+): error is Prisma.PrismaClientKnownRequestError {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2003'
+  );
+}
+
 interface UniqueViolationMeta {
   target?: string | string[];
   driverAdapterError?: {

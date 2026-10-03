@@ -4,6 +4,7 @@ export type ErrorCode =
   | 'UNAUTHORIZED'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'PAYLOAD_TOO_LARGE'
   | 'BUSINESS_RULE_VIOLATION'
   | 'INTERNAL_ERROR';
 
@@ -36,6 +37,10 @@ export class AppError extends Error {
 
   static conflict(message: string, details?: unknown) {
     return new AppError(409, 'CONFLICT', message, details);
+  }
+
+  static payloadTooLarge(message: string) {
+    return new AppError(413, 'PAYLOAD_TOO_LARGE', message);
   }
 
   /** The request is well-formed but breaks a domain rule (e.g. TcAg on a Pump). */
