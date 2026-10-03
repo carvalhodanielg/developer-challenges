@@ -53,7 +53,10 @@ All API routes use the prefix `/api/v1`. Full endpoint list: `PLAN.md` §4.
 
 - **Auth**: there is no `User` table. The single fixed login comes from the env vars `AUTH_EMAIL` and `AUTH_PASSWORD_HASH` (a bcrypt hash). The JWT lives in an httpOnly, secure cookie, and on app boot `GET /auth/me` hydrates Redux. In production the frontend (Vercel) and API (Render) are on different domains, so the cookie needs `SameSite=None; Secure` and CORS needs `credentials: true`.
 - **Sensor identity**: `id` is a system-generated uuid primary key. `serialNumber` is entered by the user, represents the physical sensor label, and is also unique. A duplicate `serialNumber` returns 409. `MonitoringPoint` to `Sensor` is **1:1**: `monitoringPointId` is `@unique`.
-- **TcAg/TcAs are not allowed on Pump machines.** The application layer enforces this in `sensors.service.ts` through `assertSensorCompatibleWithMachine`; there is no DB constraint. A violation returns **422**. Tests must cover all 6 machine × sensor combinations. The UI mirrors the rule for UX, but the backend is authoritative.
+- **TcAg/TcAs are not allowed on Pump machines.** The rule is defined once, as `isSensorCompatibleWithMachine`/`disallowedSensorModels` in `packages/shared-types/src/rules.ts`. The API enforces it, and the web app imports the same functions only for UX; the backend is authoritative. There is no DB constraint, and a violation returns **422**. Two code paths must enforce it:
+  - attaching a sensor: `assertSensorCompatibleWithMachine` in `sensors.service.ts`;
+  - changing a machine's type in `machines.service.ts` `updateMachine`, which checks inside a transaction for sensors the new type forbids.
+  Tests must cover all 6 machine × sensor combinations.
 - **Error mapping** happens in one place, `errorHandler`: Prisma P2025 → 404, P2002 → 409, zod → 400, anything else → 500. Throw an `AppError` instead of writing responses from inside services.
 - **Monitoring-point listing** (`GET /monitoring-points`):
   - Pagination is server-side, with `pageSize` 5.

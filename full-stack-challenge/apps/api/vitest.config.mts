@@ -14,6 +14,9 @@ export default defineConfig(() => ({
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     passWithNoTests: true,
     setupFiles: ['./vitest.setup.ts'],
+    globalSetup: ['./vitest.global-setup.ts'],
+    // Integration tests share one database, so test files run one at a time.
+    fileParallelism: false,
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../coverage/apps/api',

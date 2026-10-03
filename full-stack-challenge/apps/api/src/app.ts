@@ -4,7 +4,9 @@ import express from 'express';
 import { env } from './config/env';
 import { AppError } from './errors/AppError';
 import { errorHandler } from './middlewares/errorHandler';
+import { requireAuth } from './middlewares/requireAuth';
 import { authRoutes } from './modules/auth/auth.routes';
+import { machinesRoutes } from './modules/machines/machines.routes';
 
 export function createApp() {
   const app = express();
@@ -21,6 +23,8 @@ export function createApp() {
     res.json({ status: 'ok' });
   });
   api.use('/auth', authRoutes);
+  // Private routers: requireAuth per router keeps unknown paths a 404.
+  api.use('/machines', requireAuth, machinesRoutes);
   app.use('/api/v1', api);
 
   app.use((req) => {

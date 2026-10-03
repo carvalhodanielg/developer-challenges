@@ -12,3 +12,18 @@ export const SensorModel = {
   HFPlus: 'HF+',
 } as const;
 export type SensorModel = (typeof SensorModel)[keyof typeof SensorModel];
+
+/** The SensorModel key, which is what the database stores (`HFPlus`). */
+export type SensorModelKey = keyof typeof SensorModel;
+
+export function sensorModelFromKey(key: SensorModelKey): SensorModel {
+  return SensorModel[key];
+}
+
+export function sensorModelToKey(model: SensorModel): SensorModelKey {
+  const key = (Object.keys(SensorModel) as SensorModelKey[]).find(
+    (candidate) => SensorModel[candidate] === model,
+  );
+  if (!key) throw new Error(`Unknown sensor model: ${model}`);
+  return key;
+}
