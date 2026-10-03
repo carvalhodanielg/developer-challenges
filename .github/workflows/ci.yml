@@ -1,0 +1,96 @@
+# CI for the Dynapredict full-stack challenge. The Nx workspace lives in
+# full-stack-challenge/, so every step runs there and only changes under it
+# (or to this file) trigger the workflow.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'full-stack-challenge/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'full-stack-challenge/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read # nx-set-shas reads past workflow runs to find the affected base
+
+defaults:
+  run:
+    working-directory: full-stack-challenge
+
+env:
+  NODE_VERSION: 24
+  NX_DAEMON: false
+  NX_NO_CLOUD: true
+
+jobs:
+  lint-typecheck:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # nx affected compares against the last green commit
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: full-stack-challenge/package-lock.json
+
+      - uses: actions/cache@v6
+        with:
+          path: full-stack-challenge/.nx/cache
+          key: nx-lint-${{ runner.os }}-${{ hashFiles('full-stack-challenge/package-lock.json') }}-${{ github.sha }}
+          restore-keys: nx-lint-${{ runner.os }}-${{ hashFiles('full-stack-challenge/package-lock.json') }}-
+
+      - run: npm ci
+
+      - uses: nrwl/nx-set-shas@v5
+        with:
+          working-directory: full-stack-challenge
+
+      # The Prisma client is generated into apps/api/src/generated (gitignored).
+      - run: npx prisma generate
+
+      - run: npm run format:check
+      - run: npx nx affected -t lint typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: full-stack-challenge/package-lock.json
+
+      - uses: actions/cache@v6
+        with:
+          path: full-stack-challenge/.nx/cache
+          key: nx-build-${{ runner.os }}-${{ hashFiles('full-stack-challenge/package-lock.json') }}-${{ github.sha }}
+          restore-keys: nx-build-${{ runner.os }}-${{ hashFiles('full-stack-challenge/package-lock.json') }}-
+
+      - run: npm ci
+
+      - uses: nrwl/nx-set-shas@v5
+        with:
+          working-directory: full-stack-challenge
+
+      - run: npx prisma generate
+      - run: npx nx affected -t build

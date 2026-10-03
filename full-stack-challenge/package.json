@@ -2,7 +2,13 @@
   "name": "@dynapredict/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "lint": "nx run-many -t lint",
+    "lint:fix": "nx run-many -t lint --fix",
+    "typecheck": "nx run-many -t typecheck",
+    "format": "nx format:write",
+    "format:check": "nx format:check --all"
+  },
   "private": true,
   "devDependencies": {
     "@eslint/js": "^9.8.0",

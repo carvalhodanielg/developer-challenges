@@ -21,6 +21,8 @@ npx nx serve web                               # Vite frontend
 npx nx run-many -t test [--coverage]           # all unit tests (Vitest)
 npx nx test api -- -t "<test name>"            # single test by name (Vitest filter)
 npx nx affected -t lint typecheck build        # same gates as CI
+npm run lint && npm run typecheck              # all projects (npm run lint:fix to autofix)
+npm run format:check                           # prettier check (npm run format to write)
 npx nx e2e web-e2e                             # Cypress (local only, not a CI gate)
 npx prisma migrate dev --schema apps/api/prisma/schema.prisma
 npx prisma db seed                             # demo machines/points/sensors/readings
@@ -90,7 +92,7 @@ These are requirements, not preferences. Details are in `PLAN.md` §5.
 
 ## CI / deploy
 
-- **`.github/workflows/ci.yml`** gates on lint+typecheck, build, and tests with coverage. A SonarCloud quality gate then reads the lcov report. Cypress is deliberately not a gate.
+- **`.github/workflows/ci.yml`** lives at the **git root** (`developer-challenges/`), not in this workspace, because GitHub only reads workflows from the repo root. Every step runs with `working-directory: full-stack-challenge`, and the workflow triggers only on changes under this folder. It gates on lint+typecheck, build, and tests with coverage. A SonarCloud quality gate then reads the lcov report. Cypress is deliberately not a gate. CI runs `npx prisma generate` before typecheck/build, because the generated client is gitignored.
 - **Docker** (multi-stage `api`/`web` Dockerfiles plus `docker-compose.yml`) is for dev and CI only. Production runs native builds: Neon (Postgres), Render (API), and Vercel (web, via `VITE_API_URL`).
 - Out of scope: load balancer and load tests.
 
