@@ -1,10 +1,21 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AuthState } from '../features/auth/authSlice';
 import * as authApi from '../services/authApi';
+import * as machinesApi from '../services/machinesApi';
 import { renderWithProviders } from '../testing/renderWithProviders';
 import App from './app';
 
 vi.mock('../services/authApi');
+vi.mock('../services/machinesApi');
+
+function resetApiMocks() {
+  vi.resetAllMocks();
+  // These tests only look at routing and the shell: the list stays loading,
+  // so no response lands after a test has finished.
+  vi.mocked(machinesApi.listMachines).mockReturnValue(
+    new Promise(() => undefined),
+  );
+}
 
 const signedIn: AuthState = {
   status: 'authenticated',
@@ -25,7 +36,7 @@ function heading() {
 }
 
 describe('App routes', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(resetApiMocks);
 
   it('opens the machines page from the root', () => {
     renderApp('/');
@@ -64,7 +75,7 @@ describe('App routes', () => {
 });
 
 describe('AppLayout', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(resetApiMocks);
 
   it('marks the current page in the navigation', () => {
     renderApp('/monitoring-points');
