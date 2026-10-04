@@ -5,6 +5,7 @@ import {
   timeRangeQuery,
   createReadingsSchema,
   listReadingsQuery,
+  predictionQuery,
   sensorIdParams,
 } from './readings.schemas';
 
@@ -28,6 +29,12 @@ sensorReadingsRoutes.get(
   validate(sensorIdParams, 'params'),
   validate(timeRangeQuery, 'query'),
   readingsController.metrics,
+);
+sensorReadingsRoutes.get(
+  '/prediction',
+  validate(sensorIdParams, 'params'),
+  validate(predictionQuery, 'query'),
+  readingsController.predict,
 );
 sensorReadingsRoutes.post(
   '/',

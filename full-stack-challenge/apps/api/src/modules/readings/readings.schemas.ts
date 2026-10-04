@@ -1,7 +1,12 @@
 import {
+  DEFAULT_PREDICTION_HORIZON,
+  DEFAULT_PREDICTION_WINDOW,
   DEFAULT_READINGS_PAGE_SIZE,
+  MAX_PREDICTION_HORIZON,
+  MAX_PREDICTION_WINDOW,
   MAX_READINGS_PAGE_SIZE,
   MAX_READINGS_PER_REQUEST,
+  PREDICTION_METHODS,
 } from '@dynapredict/shared-types';
 import { z } from 'zod';
 
@@ -61,3 +66,22 @@ export const timeRangeQuery = z
   .refine(isOrderedRange, unorderedRange);
 
 export type TimeRangeQuery = z.infer<typeof timeRangeQuery>;
+
+export const predictionQuery = z.object({
+  method: z.enum(PREDICTION_METHODS).default('movingAverage'),
+  // A line needs two points, so does a step between timestamps.
+  window: z.coerce
+    .number()
+    .int()
+    .min(2)
+    .max(MAX_PREDICTION_WINDOW)
+    .default(DEFAULT_PREDICTION_WINDOW),
+  horizon: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PREDICTION_HORIZON)
+    .default(DEFAULT_PREDICTION_HORIZON),
+});
+
+export type PredictionQuery = z.infer<typeof predictionQuery>;

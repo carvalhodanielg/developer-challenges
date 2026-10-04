@@ -1,6 +1,7 @@
 import type {
   CreateReadingsResultDto,
   DeleteReadingsResultDto,
+  PredictionDto,
   ReadingsCountDto,
   ReadingsMetricsDto,
   ReadingsPageDto,
@@ -8,10 +9,15 @@ import type {
 import { AppError } from '../../errors/AppError';
 import { prisma } from '../../lib/prisma';
 import { isForeignKeyViolation } from '../../lib/prismaErrors';
+import {
+  linearRegressionForecast,
+  movingAverageForecast,
+} from './readings.prediction';
 import type {
   TimeRangeQuery,
   CreateReadingsBody,
   ListReadingsQuery,
+  PredictionQuery,
 } from './readings.schemas';
 
 async function assertSensorExists(sensorId: string): Promise<void> {
@@ -140,4 +146,49 @@ export async function deleteReadings(
   });
   if (count === 0) await assertSensorExists(sensorId);
   return { deleted: count };
+}
+
+const forecasters = {
+  movingAverage: movingAverageForecast,
+  linearRegression: linearRegressionForecast,
+} as const;
+
+/**
+ * Forecasts `horizon` points after the latest reading from the latest
+ * `window` readings. Reading only the window keeps the cost flat however long
+ * the series is.
+ */
+export async function predictReadings(
+  sensorId: string,
+  query: PredictionQuery,
+): Promise<PredictionDto> {
+  const latest = await prisma.reading.findMany({
+    where: { sensorId },
+    orderBy: { timestamp: 'desc' },
+    select: { timestamp: true, value: true },
+    take: query.window,
+  });
+  if (latest.length === 0) await assertSensorExists(sensorId);
+  if (latest.length < 2) {
+    throw AppError.unprocessable('A prediction needs at least 2 readings', {
+      readings: latest.length,
+    });
+  }
+
+  const points = latest
+    .reverse()
+    .map((row) => ({ t: row.timestamp.getTime(), value: row.value }));
+  const forecast = forecasters[query.method](points, query.horizon);
+  return {
+    data: forecast.map((point) => ({
+      timestamp: new Date(point.t).toISOString(),
+      value: point.value,
+    })),
+    meta: {
+      method: query.method,
+      window: query.window,
+      used: points.length,
+      horizon: query.horizon,
+    },
+  };
 }

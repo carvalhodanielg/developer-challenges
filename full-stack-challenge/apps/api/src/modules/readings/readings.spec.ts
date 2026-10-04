@@ -41,6 +41,16 @@ function deleteReadings(sensorId: string, query: Record<string, string> = {}) {
     .set('Cookie', cookie);
 }
 
+function getPrediction(
+  sensorId: string,
+  query: Record<string, string | number> = {},
+) {
+  return request(app)
+    .get(`/api/v1/sensors/${sensorId}/readings/prediction`)
+    .query(query)
+    .set('Cookie', cookie);
+}
+
 function postReadings(sensorId: string, body: object) {
   return request(app)
     .post(`/api/v1/sensors/${sensorId}/readings`)
@@ -732,5 +742,100 @@ describe('DELETE /api/v1/sensors/:sensorId/readings', () => {
 
     expect(res.status).toBe(400);
     expect(await prisma.reading.count()).toBe(3);
+  });
+});
+
+describe('GET /api/v1/sensors/:sensorId/readings/prediction', () => {
+  it('requires a session', async () => {
+    const res = await request(app).get(
+      `/api/v1/sensors/${UNKNOWN_ID}/readings/prediction`,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it('forecasts the moving average of the latest 5 readings by default', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    // The outlier at minute 0 falls outside the window of the last 5.
+    await seedValues(sensor.id, [1000, 1, 2, 3, 4, 5]);
+
+    const res = await getPrediction(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body.meta).toEqual({
+      method: 'movingAverage',
+      window: 5,
+      used: 5,
+      horizon: 10,
+    });
+    expect(res.body.data).toHaveLength(10);
+    expect(res.body.data[0]).toEqual({ timestamp: minute(6), value: 3 });
+    expect(res.body.data[9]).toEqual({ timestamp: minute(15), value: 3 });
+  });
+
+  it('extrapolates the trend with linear regression', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    // value = 2 + 1.5 per minute
+    await seedValues(sensor.id, [2, 3.5, 5, 6.5]);
+
+    const res = await getPrediction(sensor.id, {
+      method: 'linearRegression',
+      window: 4,
+      horizon: 2,
+    });
+
+    expect(res.status).toBe(200);
+    expect(
+      res.body.data.map((p: { timestamp: string }) => p.timestamp),
+    ).toEqual([minute(4), minute(5)]);
+    expect(res.body.data[0].value).toBeCloseTo(8, 9);
+    expect(res.body.data[1].value).toBeCloseTo(9.5, 9);
+  });
+
+  it('uses every reading when the series is shorter than the window', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedValues(sensor.id, [1, 2, 6]);
+
+    const res = await getPrediction(sensor.id, { window: 50, horizon: 1 });
+
+    expect(res.body.meta).toMatchObject({ window: 50, used: 3 });
+    expect(res.body.data).toEqual([{ timestamp: minute(3), value: 3 }]);
+  });
+
+  it.each([
+    ['no readings', []],
+    ['a single reading', [5]],
+  ])('answers 422 for a sensor with %s', async (_, values) => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedValues(sensor.id, values);
+
+    const res = await getPrediction(sensor.id);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toEqual({
+      code: 'BUSINESS_RULE_VIOLATION',
+      message: 'A prediction needs at least 2 readings',
+      details: { readings: values.length },
+    });
+  });
+
+  it('returns 404 for an unknown sensor', async () => {
+    const res = await getPrediction(UNKNOWN_ID);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.message).toBe('Sensor not found');
+  });
+
+  it.each([
+    ['an unknown method', { method: 'arima' }],
+    ['a window of 1', { window: 1 }],
+    ['a horizon of 0', { horizon: 0 }],
+    ['a horizon over the maximum', { horizon: 501 }],
+  ])('rejects %s with 400', async (_, query) => {
+    const [sensor] = await createSensors('HFP-1');
+
+    const res = await getPrediction(sensor.id, query);
+
+    expect(res.status).toBe(400);
   });
 });

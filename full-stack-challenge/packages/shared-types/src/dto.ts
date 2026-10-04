@@ -146,3 +146,26 @@ export interface ReadingsMetricsDto {
 export interface DeleteReadingsResultDto {
   deleted: number;
 }
+
+export const PREDICTION_METHODS = [
+  'movingAverage',
+  'linearRegression',
+] as const;
+export type PredictionMethod = (typeof PREDICTION_METHODS)[number];
+
+export const DEFAULT_PREDICTION_WINDOW = 5;
+export const MAX_PREDICTION_WINDOW = 1000;
+export const DEFAULT_PREDICTION_HORIZON = 10;
+export const MAX_PREDICTION_HORIZON = 500;
+
+/** Forecast points after the last reading, from its latest `used` readings. */
+export interface PredictionDto {
+  data: ReadingDto[];
+  meta: {
+    method: PredictionMethod;
+    window: number;
+    /** Readings the forecast used: `window`, or fewer if the series is short. */
+    used: number;
+    horizon: number;
+  };
+}

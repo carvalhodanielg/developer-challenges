@@ -3,6 +3,7 @@ import type {
   TimeRangeQuery,
   CreateReadingsBody,
   ListReadingsQuery,
+  PredictionQuery,
 } from './readings.schemas';
 import * as readingsService from './readings.service';
 
@@ -59,6 +60,18 @@ export async function remove(
     await readingsService.deleteReadings(
       req.params.sensorId,
       req.query as unknown as TimeRangeQuery,
+    ),
+  );
+}
+
+export async function predict(
+  req: Request<{ sensorId: string }>,
+  res: Response,
+) {
+  res.json(
+    await readingsService.predictReadings(
+      req.params.sensorId,
+      req.query as unknown as PredictionQuery,
     ),
   );
 }
