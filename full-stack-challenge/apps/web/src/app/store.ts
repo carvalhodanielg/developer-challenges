@@ -1,5 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
+import { sessionExpired } from '../features/auth/authSlice';
 import { persistColorMode } from '../features/ui/uiSlice';
+import { setUnauthorizedHandler } from '../services/apiClient';
 import { rootReducer, type RootState } from './rootReducer';
 
 /**
@@ -23,6 +25,9 @@ export function setupStore(preloadedState?: Partial<RootState>) {
 }
 
 export const store = setupStore();
+
+// A 401 on a private request means the session ended while the app was open.
+setUnauthorizedHandler(() => store.dispatch(sessionExpired()));
 
 export type AppStore = ReturnType<typeof setupStore>;
 export type AppDispatch = AppStore['dispatch'];

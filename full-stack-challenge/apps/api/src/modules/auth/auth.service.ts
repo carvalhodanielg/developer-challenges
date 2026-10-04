@@ -1,12 +1,11 @@
+import type { AuthUserDto } from '@dynapredict/shared-types';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { AppError } from '../../errors/AppError';
 import type { LoginInput } from './auth.schemas';
 
-export interface AuthUser {
-  email: string;
-}
+export type AuthUser = AuthUserDto;
 
 const JWT_ALGORITHM = 'HS256';
 

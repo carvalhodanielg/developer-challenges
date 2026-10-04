@@ -24,6 +24,21 @@ export interface ApiErrorBody {
   };
 }
 
+/** The single fixed user; there is no user table. */
+export interface AuthUserDto {
+  email: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/** Body of `POST /auth/login` and `GET /auth/me`. */
+export interface AuthSessionDto {
+  user: AuthUserDto;
+}
+
 export interface SensorDto {
   id: string;
   serialNumber: string;
