@@ -129,3 +129,16 @@ export interface ReadingsPageDto {
 export interface ReadingsCountDto {
   count: number;
 }
+
+/**
+ * Aggregates of a sensor's series (or of a range of it). Everything but
+ * `count` is null when there are no readings: an average of 0 would be a lie.
+ */
+export interface ReadingsMetricsDto {
+  count: number;
+  min: number | null;
+  max: number | null;
+  avg: number | null;
+  firstTimestamp: string | null;
+  lastTimestamp: string | null;
+}

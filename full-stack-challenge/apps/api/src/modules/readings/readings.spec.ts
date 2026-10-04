@@ -27,6 +27,13 @@ function countReadings(sensorId: string, query: Record<string, string> = {}) {
     .set('Cookie', cookie);
 }
 
+function getMetrics(sensorId: string, query: Record<string, string> = {}) {
+  return request(app)
+    .get(`/api/v1/sensors/${sensorId}/readings/metrics`)
+    .query(query)
+    .set('Cookie', cookie);
+}
+
 function postReadings(sensorId: string, body: object) {
   return request(app)
     .post(`/api/v1/sensors/${sensorId}/readings`)
@@ -71,6 +78,17 @@ async function seedReadings(sensorId: string, count: number) {
     })),
   });
   return readings;
+}
+
+/** Stores the values one minute apart, timestamped like `series()`. */
+async function seedValues(sensorId: string, values: number[]) {
+  await prisma.reading.createMany({
+    data: values.map((value, i) => ({
+      sensorId,
+      timestamp: new Date(minute(i)),
+      value,
+    })),
+  });
 }
 
 /** The ISO timestamp of the i-th reading of `series()`. */
@@ -496,6 +514,113 @@ describe('GET /api/v1/sensors/:sensorId/readings/count', () => {
     const [sensor] = await createSensors('HFP-1');
 
     const res = await countReadings(sensor.id, query);
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/v1/sensors/:sensorId/readings/metrics', () => {
+  // min and max sit away from the ends of the series, and one value is negative.
+  const VALUES = [4, -2, 10, 7, 1];
+
+  it('requires a session', async () => {
+    const res = await request(app).get(
+      `/api/v1/sensors/${UNKNOWN_ID}/readings/metrics`,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it('aggregates the whole series', async () => {
+    const [sensor, other] = await createSensors('HFP-1', 'HFP-2');
+    await seedValues(sensor.id, VALUES);
+    await seedValues(other.id, [100, -100]);
+
+    const res = await getMetrics(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      count: 5,
+      min: -2,
+      max: 10,
+      avg: 4,
+      firstTimestamp: minute(0),
+      lastTimestamp: minute(4),
+    });
+  });
+
+  it('aggregates only an inclusive from/to range', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedValues(sensor.id, VALUES);
+
+    const res = await getMetrics(sensor.id, { from: minute(2), to: minute(4) });
+
+    expect(res.body).toEqual({
+      count: 3,
+      min: 1,
+      max: 10,
+      avg: 6,
+      firstTimestamp: minute(2),
+      lastTimestamp: minute(4),
+    });
+  });
+
+  it('keeps fractional averages', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedValues(sensor.id, [0.1, 0.2, 0.4]);
+
+    const res = await getMetrics(sensor.id);
+
+    expect(res.body.avg).toBeCloseTo(0.7 / 3, 10);
+  });
+
+  it('reports a single reading as min, max and avg', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedValues(sensor.id, [3.5]);
+
+    const res = await getMetrics(sensor.id);
+
+    expect(res.body).toMatchObject({ count: 1, min: 3.5, max: 3.5, avg: 3.5 });
+    expect(res.body.firstTimestamp).toBe(res.body.lastTimestamp);
+  });
+
+  it('returns nulls, not zeros, for a sensor without readings', async () => {
+    const [sensor] = await createSensors('HFP-1');
+
+    const res = await getMetrics(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      count: 0,
+      min: null,
+      max: null,
+      avg: null,
+      firstTimestamp: null,
+      lastTimestamp: null,
+    });
+  });
+
+  it('returns nulls for a range without readings', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedValues(sensor.id, VALUES);
+
+    const res = await getMetrics(sensor.id, { from: minute(10) });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ count: 0, avg: null });
+  });
+
+  it('returns 404 for an unknown sensor', async () => {
+    const res = await getMetrics(UNKNOWN_ID);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.message).toBe('Sensor not found');
+  });
+
+  it('rejects from after to with 400', async () => {
+    const [sensor] = await createSensors('HFP-1');
+
+    const res = await getMetrics(sensor.id, { from: minute(2), to: minute(1) });
 
     expect(res.status).toBe(400);
   });

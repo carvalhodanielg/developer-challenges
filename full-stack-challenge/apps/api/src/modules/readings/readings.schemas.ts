@@ -55,8 +55,9 @@ export const listReadingsQuery = z
 
 export type ListReadingsQuery = z.infer<typeof listReadingsQuery>;
 
-export const countReadingsQuery = z
+/** `?from&to` alone: count, metrics and delete. */
+export const timeRangeQuery = z
   .object(timeRangeShape)
   .refine(isOrderedRange, unorderedRange);
 
-export type CountReadingsQuery = z.infer<typeof countReadingsQuery>;
+export type TimeRangeQuery = z.infer<typeof timeRangeQuery>;

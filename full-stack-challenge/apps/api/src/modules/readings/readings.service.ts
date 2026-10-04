@@ -1,13 +1,14 @@
 import type {
   CreateReadingsResultDto,
   ReadingsCountDto,
+  ReadingsMetricsDto,
   ReadingsPageDto,
 } from '@dynapredict/shared-types';
 import { AppError } from '../../errors/AppError';
 import { prisma } from '../../lib/prisma';
 import { isForeignKeyViolation } from '../../lib/prismaErrors';
 import type {
-  CountReadingsQuery,
+  TimeRangeQuery,
   CreateReadingsBody,
   ListReadingsQuery,
 } from './readings.schemas';
@@ -91,7 +92,7 @@ export async function listReadings(
 /** How many readings the sensor has, optionally within an inclusive range. */
 export async function countReadings(
   sensorId: string,
-  query: CountReadingsQuery,
+  query: TimeRangeQuery,
 ): Promise<ReadingsCountDto> {
   const count = await prisma.reading.count({
     where: { sensorId, timestamp: { gte: query.from, lte: query.to } },
@@ -99,4 +100,28 @@ export async function countReadings(
   // A non-zero count proves the sensor exists; zero is ambiguous.
   if (count === 0) await assertSensorExists(sensorId);
   return { count };
+}
+
+/** Min, max and average of the values in one aggregate query. */
+export async function getReadingsMetrics(
+  sensorId: string,
+  query: TimeRangeQuery,
+): Promise<ReadingsMetricsDto> {
+  const result = await prisma.reading.aggregate({
+    where: { sensorId, timestamp: { gte: query.from, lte: query.to } },
+    _count: { _all: true },
+    _min: { value: true, timestamp: true },
+    _max: { value: true, timestamp: true },
+    _avg: { value: true },
+  });
+  const count = result._count._all;
+  if (count === 0) await assertSensorExists(sensorId);
+  return {
+    count,
+    min: result._min.value,
+    max: result._max.value,
+    avg: result._avg.value,
+    firstTimestamp: result._min.timestamp?.toISOString() ?? null,
+    lastTimestamp: result._max.timestamp?.toISOString() ?? null,
+  };
 }

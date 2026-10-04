@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import type {
-  CountReadingsQuery,
+  TimeRangeQuery,
   CreateReadingsBody,
   ListReadingsQuery,
 } from './readings.schemas';
@@ -21,7 +21,19 @@ export async function count(req: Request<{ sensorId: string }>, res: Response) {
   res.json(
     await readingsService.countReadings(
       req.params.sensorId,
-      req.query as unknown as CountReadingsQuery,
+      req.query as unknown as TimeRangeQuery,
+    ),
+  );
+}
+
+export async function metrics(
+  req: Request<{ sensorId: string }>,
+  res: Response,
+) {
+  res.json(
+    await readingsService.getReadingsMetrics(
+      req.params.sensorId,
+      req.query as unknown as TimeRangeQuery,
     ),
   );
 }

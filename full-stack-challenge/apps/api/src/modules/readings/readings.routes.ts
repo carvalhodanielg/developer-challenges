@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../middlewares/validate';
 import * as readingsController from './readings.controller';
 import {
-  countReadingsQuery,
+  timeRangeQuery,
   createReadingsSchema,
   listReadingsQuery,
   sensorIdParams,
@@ -20,8 +20,14 @@ sensorReadingsRoutes.get(
 sensorReadingsRoutes.get(
   '/count',
   validate(sensorIdParams, 'params'),
-  validate(countReadingsQuery, 'query'),
+  validate(timeRangeQuery, 'query'),
   readingsController.count,
+);
+sensorReadingsRoutes.get(
+  '/metrics',
+  validate(sensorIdParams, 'params'),
+  validate(timeRangeQuery, 'query'),
+  readingsController.metrics,
 );
 sensorReadingsRoutes.post(
   '/',
