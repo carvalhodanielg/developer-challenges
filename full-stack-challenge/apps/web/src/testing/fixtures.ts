@@ -1,4 +1,9 @@
-import type { MachineDto, Paginated } from '@dynapredict/shared-types';
+import type {
+  MachineDto,
+  MonitoringPointListItemDto,
+  Paginated,
+  SensorDto,
+} from '@dynapredict/shared-types';
 
 export function aMachine(overrides: Partial<MachineDto> = {}): MachineDto {
   return {
@@ -6,6 +11,31 @@ export function aMachine(overrides: Partial<MachineDto> = {}): MachineDto {
     name: 'Pump 01',
     type: 'Pump',
     monitoringPointsCount: 2,
+    createdAt: '2026-10-01T12:00:00.000Z',
+    updatedAt: '2026-10-01T12:00:00.000Z',
+    ...overrides,
+  };
+}
+
+export function aSensor(overrides: Partial<SensorDto> = {}): SensorDto {
+  return {
+    id: 's-1',
+    serialNumber: 'HFP-0001',
+    model: 'HF+',
+    monitoringPointId: 'p-1',
+    createdAt: '2026-10-01T12:00:00.000Z',
+    ...overrides,
+  };
+}
+
+export function aPointListItem(
+  overrides: Partial<MonitoringPointListItemDto> = {},
+): MonitoringPointListItemDto {
+  return {
+    id: 'p-1',
+    name: 'Bearing DE',
+    machine: { id: 'm-1', name: 'Pump 01', type: 'Pump' },
+    sensor: aSensor(),
     createdAt: '2026-10-01T12:00:00.000Z',
     updatedAt: '2026-10-01T12:00:00.000Z',
     ...overrides,

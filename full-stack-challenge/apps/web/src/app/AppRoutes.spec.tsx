@@ -2,18 +2,22 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AuthState } from '../features/auth/authSlice';
 import * as authApi from '../services/authApi';
 import * as machinesApi from '../services/machinesApi';
+import * as monitoringPointsApi from '../services/monitoringPointsApi';
 import { renderWithProviders } from '../testing/renderWithProviders';
 import App from './app';
 
 vi.mock('../services/authApi');
 vi.mock('../services/machinesApi');
+vi.mock('../services/monitoringPointsApi');
 
 function resetApiMocks() {
   vi.resetAllMocks();
   // These tests only look at routing and the shell: the list stays loading,
   // so no response lands after a test has finished.
-  vi.mocked(machinesApi.listMachines).mockReturnValue(
-    new Promise(() => undefined),
+  const pending = () => new Promise<never>(() => undefined);
+  vi.mocked(machinesApi.listMachines).mockReturnValue(pending());
+  vi.mocked(monitoringPointsApi.listMonitoringPoints).mockReturnValue(
+    pending(),
   );
 }
 

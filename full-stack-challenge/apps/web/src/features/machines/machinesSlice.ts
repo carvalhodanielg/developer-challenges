@@ -8,13 +8,12 @@ import {
   createSlice,
   type PayloadAction,
 } from '@reduxjs/toolkit';
+import type { RequestStatus } from '../../app/requestStatus';
 import type { RootState } from '../../app/rootReducer';
 import { type ApiError, toApiError } from '../../services/apiClient';
 import * as machinesApi from '../../services/machinesApi';
 import type { MachinesQuery } from '../../services/machinesApi';
 import { logout, sessionExpired } from '../auth/authSlice';
-
-export type RequestStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
 export interface MachinesState {
   items: MachineDto[];
