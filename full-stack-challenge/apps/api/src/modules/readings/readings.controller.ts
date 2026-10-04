@@ -1,5 +1,9 @@
 import type { Request, Response } from 'express';
-import type { CreateReadingsBody, ListReadingsQuery } from './readings.schemas';
+import type {
+  CountReadingsQuery,
+  CreateReadingsBody,
+  ListReadingsQuery,
+} from './readings.schemas';
 import * as readingsService from './readings.service';
 
 // Params, query and body were already parsed by validate() in the routes.
@@ -9,6 +13,15 @@ export async function list(req: Request<{ sensorId: string }>, res: Response) {
     await readingsService.listReadings(
       req.params.sensorId,
       req.query as unknown as ListReadingsQuery,
+    ),
+  );
+}
+
+export async function count(req: Request<{ sensorId: string }>, res: Response) {
+  res.json(
+    await readingsService.countReadings(
+      req.params.sensorId,
+      req.query as unknown as CountReadingsQuery,
     ),
   );
 }

@@ -1,11 +1,16 @@
 import type {
   CreateReadingsResultDto,
+  ReadingsCountDto,
   ReadingsPageDto,
 } from '@dynapredict/shared-types';
 import { AppError } from '../../errors/AppError';
 import { prisma } from '../../lib/prisma';
 import { isForeignKeyViolation } from '../../lib/prismaErrors';
-import type { CreateReadingsBody, ListReadingsQuery } from './readings.schemas';
+import type {
+  CountReadingsQuery,
+  CreateReadingsBody,
+  ListReadingsQuery,
+} from './readings.schemas';
 
 async function assertSensorExists(sensorId: string): Promise<void> {
   const sensor = await prisma.sensor.findUnique({
@@ -81,4 +86,17 @@ export async function listReadings(
         : null,
     },
   };
+}
+
+/** How many readings the sensor has, optionally within an inclusive range. */
+export async function countReadings(
+  sensorId: string,
+  query: CountReadingsQuery,
+): Promise<ReadingsCountDto> {
+  const count = await prisma.reading.count({
+    where: { sensorId, timestamp: { gte: query.from, lte: query.to } },
+  });
+  // A non-zero count proves the sensor exists; zero is ambiguous.
+  if (count === 0) await assertSensorExists(sensorId);
+  return { count };
 }

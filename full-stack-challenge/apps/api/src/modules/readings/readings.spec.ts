@@ -20,6 +20,13 @@ function getReadings(
     .set('Cookie', cookie);
 }
 
+function countReadings(sensorId: string, query: Record<string, string> = {}) {
+  return request(app)
+    .get(`/api/v1/sensors/${sensorId}/readings/count`)
+    .query(query)
+    .set('Cookie', cookie);
+}
+
 function postReadings(sensorId: string, body: object) {
   return request(app)
     .post(`/api/v1/sensors/${sensorId}/readings`)
@@ -407,6 +414,88 @@ describe('GET /api/v1/sensors/:sensorId/readings', () => {
 
   it('rejects a sensor id that is not a uuid with 400', async () => {
     const res = await getReadings('42');
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/v1/sensors/:sensorId/readings/count', () => {
+  it('requires a session', async () => {
+    const res = await request(app).get(
+      `/api/v1/sensors/${UNKNOWN_ID}/readings/count`,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it("counts all of the sensor's readings", async () => {
+    const [sensor, other] = await createSensors('HFP-1', 'HFP-2');
+    await seedReadings(sensor.id, 7);
+    await seedReadings(other.id, 3);
+
+    const res = await countReadings(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ count: 7 });
+  });
+
+  it('counts within an inclusive from/to range', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedReadings(sensor.id, 10);
+
+    const res = await countReadings(sensor.id, {
+      from: minute(2),
+      to: minute(5),
+    });
+
+    expect(res.body).toEqual({ count: 4 });
+  });
+
+  it.each([
+    ['only from', { from: minute(7) }, 3],
+    ['only to', { to: minute(2) }, 3],
+  ])('accepts an open-ended range with %s', async (_, query, expected) => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedReadings(sensor.id, 10);
+
+    const res = await countReadings(sensor.id, query);
+
+    expect(res.body).toEqual({ count: expected });
+  });
+
+  it('agrees with the uploads: duplicates are not counted twice', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await postReadings(sensor.id, { readings: series(3) });
+    await postReadings(sensor.id, { readings: series(5) });
+
+    const res = await countReadings(sensor.id);
+
+    expect(res.body).toEqual({ count: 5 });
+  });
+
+  it('returns zero for a sensor without readings', async () => {
+    const [sensor] = await createSensors('HFP-1');
+
+    const res = await countReadings(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ count: 0 });
+  });
+
+  it('returns 404 for an unknown sensor', async () => {
+    const res = await countReadings(UNKNOWN_ID);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.message).toBe('Sensor not found');
+  });
+
+  it.each([
+    ['from after to', { from: minute(2), to: minute(1) }],
+    ['a to that is not a date', { to: 'now' }],
+  ])('rejects %s with 400', async (_, query) => {
+    const [sensor] = await createSensors('HFP-1');
+
+    const res = await countReadings(sensor.id, query);
 
     expect(res.status).toBe(400);
   });

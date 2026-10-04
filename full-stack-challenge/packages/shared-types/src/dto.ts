@@ -125,3 +125,7 @@ export interface ReadingsPageDto {
   data: ReadingDto[];
   meta: { limit: number; nextCursor: string | null };
 }
+
+export interface ReadingsCountDto {
+  count: number;
+}

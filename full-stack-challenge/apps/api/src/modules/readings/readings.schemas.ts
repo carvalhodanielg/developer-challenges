@@ -54,3 +54,9 @@ export const listReadingsQuery = z
   .refine(isOrderedRange, unorderedRange);
 
 export type ListReadingsQuery = z.infer<typeof listReadingsQuery>;
+
+export const countReadingsQuery = z
+  .object(timeRangeShape)
+  .refine(isOrderedRange, unorderedRange);
+
+export type CountReadingsQuery = z.infer<typeof countReadingsQuery>;

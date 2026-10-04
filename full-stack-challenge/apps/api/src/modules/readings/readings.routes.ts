@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../middlewares/validate';
 import * as readingsController from './readings.controller';
 import {
+  countReadingsQuery,
   createReadingsSchema,
   listReadingsQuery,
   sensorIdParams,
@@ -15,6 +16,12 @@ sensorReadingsRoutes.get(
   validate(sensorIdParams, 'params'),
   validate(listReadingsQuery, 'query'),
   readingsController.list,
+);
+sensorReadingsRoutes.get(
+  '/count',
+  validate(sensorIdParams, 'params'),
+  validate(countReadingsQuery, 'query'),
+  readingsController.count,
 );
 sensorReadingsRoutes.post(
   '/',
