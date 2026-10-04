@@ -34,6 +34,13 @@ function getMetrics(sensorId: string, query: Record<string, string> = {}) {
     .set('Cookie', cookie);
 }
 
+function deleteReadings(sensorId: string, query: Record<string, string> = {}) {
+  return request(app)
+    .delete(`/api/v1/sensors/${sensorId}/readings`)
+    .query(query)
+    .set('Cookie', cookie);
+}
+
 function postReadings(sensorId: string, body: object) {
   return request(app)
     .post(`/api/v1/sensors/${sensorId}/readings`)
@@ -623,5 +630,107 @@ describe('GET /api/v1/sensors/:sensorId/readings/metrics', () => {
     const res = await getMetrics(sensor.id, { from: minute(2), to: minute(1) });
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/v1/sensors/:sensorId/readings', () => {
+  it('requires a session', async () => {
+    const res = await request(app).delete(
+      `/api/v1/sensors/${UNKNOWN_ID}/readings`,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it("deletes the whole series, keeping the sensor and other sensors' readings", async () => {
+    const [sensor, other] = await createSensors('HFP-1', 'HFP-2');
+    await seedReadings(sensor.id, 5);
+    await seedReadings(other.id, 3);
+
+    const res = await deleteReadings(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ deleted: 5 });
+    expect(await prisma.reading.count({ where: { sensorId: sensor.id } })).toBe(
+      0,
+    );
+    expect(await prisma.reading.count({ where: { sensorId: other.id } })).toBe(
+      3,
+    );
+    expect(await prisma.sensor.count({ where: { id: sensor.id } })).toBe(1);
+  });
+
+  it('deletes only an inclusive from/to range', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    const readings = await seedReadings(sensor.id, 6);
+
+    const res = await deleteReadings(sensor.id, {
+      from: minute(1),
+      to: minute(3),
+    });
+
+    expect(res.body).toEqual({ deleted: 3 });
+    const left = await getReadings(sensor.id);
+    expect(left.body.data).toEqual([readings[0], readings[4], readings[5]]);
+  });
+
+  it('deletes an open-ended range', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedReadings(sensor.id, 6);
+
+    const res = await deleteReadings(sensor.id, { from: minute(4) });
+
+    expect(res.body).toEqual({ deleted: 2 });
+  });
+
+  it('leaves the count at zero, as the delete flow expects', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await postReadings(sensor.id, { readings: series(4) });
+    const before = await countReadings(sensor.id);
+
+    const res = await deleteReadings(sensor.id);
+    const after = await countReadings(sensor.id);
+
+    expect(res.body.deleted).toBe(before.body.count);
+    expect(after.body).toEqual({ count: 0 });
+  });
+
+  it('lets the same readings be uploaded again after a delete', async () => {
+    const [sensor] = await createSensors('HFP-1');
+    await postReadings(sensor.id, { readings: series(3) });
+    await deleteReadings(sensor.id);
+
+    const res = await postReadings(sensor.id, { readings: series(3) });
+
+    expect(res.body).toEqual({ received: 3, inserted: 3, duplicates: 0 });
+  });
+
+  it('answers 200 with zero when there is nothing to delete', async () => {
+    const [sensor] = await createSensors('HFP-1');
+
+    const res = await deleteReadings(sensor.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ deleted: 0 });
+  });
+
+  it('returns 404 for an unknown sensor', async () => {
+    const res = await deleteReadings(UNKNOWN_ID);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.message).toBe('Sensor not found');
+  });
+
+  it.each([
+    ['from after to', { from: minute(2), to: minute(1) }],
+    ['a from that is not a date', { from: 'last week' }],
+  ])('rejects %s with 400 and deletes nothing', async (_, query) => {
+    const [sensor] = await createSensors('HFP-1');
+    await seedReadings(sensor.id, 3);
+
+    const res = await deleteReadings(sensor.id, query);
+
+    expect(res.status).toBe(400);
+    expect(await prisma.reading.count()).toBe(3);
   });
 });

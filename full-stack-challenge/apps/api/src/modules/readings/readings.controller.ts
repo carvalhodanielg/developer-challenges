@@ -49,3 +49,16 @@ export async function create(
   // A batch made only of duplicates created nothing.
   res.status(result.inserted > 0 ? 201 : 200).json(result);
 }
+
+export async function remove(
+  req: Request<{ sensorId: string }>,
+  res: Response,
+) {
+  // 200 with the count (not 204), so the UI can confirm what was erased.
+  res.json(
+    await readingsService.deleteReadings(
+      req.params.sensorId,
+      req.query as unknown as TimeRangeQuery,
+    ),
+  );
+}

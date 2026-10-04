@@ -35,3 +35,9 @@ sensorReadingsRoutes.post(
   validate(createReadingsSchema),
   readingsController.create,
 );
+sensorReadingsRoutes.delete(
+  '/',
+  validate(sensorIdParams, 'params'),
+  validate(timeRangeQuery, 'query'),
+  readingsController.remove,
+);

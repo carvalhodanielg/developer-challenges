@@ -142,3 +142,7 @@ export interface ReadingsMetricsDto {
   firstTimestamp: string | null;
   lastTimestamp: string | null;
 }
+
+export interface DeleteReadingsResultDto {
+  deleted: number;
+}

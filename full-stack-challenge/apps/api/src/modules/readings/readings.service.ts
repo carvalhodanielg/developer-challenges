@@ -1,5 +1,6 @@
 import type {
   CreateReadingsResultDto,
+  DeleteReadingsResultDto,
   ReadingsCountDto,
   ReadingsMetricsDto,
   ReadingsPageDto,
@@ -124,4 +125,19 @@ export async function getReadingsMetrics(
     firstTimestamp: result._min.timestamp?.toISOString() ?? null,
     lastTimestamp: result._max.timestamp?.toISOString() ?? null,
   };
+}
+
+/**
+ * Permanently deletes the sensor's readings, or only those within an
+ * inclusive range (decisions.md #28: hard delete).
+ */
+export async function deleteReadings(
+  sensorId: string,
+  query: TimeRangeQuery,
+): Promise<DeleteReadingsResultDto> {
+  const { count } = await prisma.reading.deleteMany({
+    where: { sensorId, timestamp: { gte: query.from, lte: query.to } },
+  });
+  if (count === 0) await assertSensorExists(sensorId);
+  return { deleted: count };
 }
