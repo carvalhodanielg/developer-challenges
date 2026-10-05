@@ -3,12 +3,10 @@ import Add from '@mui/icons-material/Add';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import Edit from '@mui/icons-material/Edit';
 import {
-  Alert,
   Box,
   Button,
   IconButton,
   Link,
-  Snackbar,
   Stack,
   Tooltip,
   Typography,
@@ -18,6 +16,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../components/DataTable';
+import { NoticeSnackbar } from '../components/NoticeSnackbar';
 import { MachineFormDialog } from '../features/machines/MachineFormDialog';
 import {
   deleteMachine,
@@ -26,7 +25,7 @@ import {
   pageSizeChanged,
   sortChanged,
 } from '../features/machines/machinesSlice';
-import type { ApiError } from '../services/apiClient';
+import { useConfirmation } from '../hooks/useConfirmation';
 import { formatDateTime, pluralize } from '../utils/format';
 
 /** Spells out the cascade, so nobody erases readings by surprise. */
@@ -43,17 +42,19 @@ function DeleteMachineMessage({ machine }: { machine: MachineDto }) {
   );
 }
 
-type FormState = { open: false } | { open: true; machine: MachineDto | null };
+interface FormState {
+  open: boolean;
+  machine: MachineDto | null;
+}
 
 export function MachinesListPage() {
   const dispatch = useAppDispatch();
   const { items, meta, query, status, error } = useAppSelector(
     (state) => state.machines,
   );
-  const [form, setForm] = useState<FormState>({ open: false });
-  const [toDelete, setToDelete] = useState<MachineDto | null>(null);
-  const [deletePending, setDeletePending] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // The form keeps its machine after closing, so it fades out unchanged.
+  const [form, setForm] = useState<FormState>({ open: false, machine: null });
+  const deletion = useConfirmation<MachineDto>();
   const [notice, setNotice] = useState<string | null>(null);
 
   // The slice changes `query` on page/size/sort; each change is a new fetch.
@@ -61,24 +62,12 @@ export function MachinesListPage() {
     void dispatch(fetchMachines());
   }, [dispatch, query]);
 
-  const openDelete = (machine: MachineDto) => {
-    setDeleteError(null);
-    setToDelete(machine);
-  };
-
   const confirmDelete = async () => {
-    if (!toDelete) return;
-    setDeletePending(true);
-    setDeleteError(null);
-    try {
-      await dispatch(deleteMachine(toDelete.id)).unwrap();
-      setNotice(`Machine "${toDelete.name}" deleted.`);
-      setToDelete(null);
-    } catch (rejected) {
-      setDeleteError((rejected as ApiError).message);
-    } finally {
-      setDeletePending(false);
-    }
+    const name = deletion.target?.name;
+    const done = await deletion.run((machine) =>
+      dispatch(deleteMachine(machine.id)).unwrap(),
+    );
+    if (done) setNotice(`Machine "${name}" deleted.`);
   };
 
   const columns: DataTableColumn<MachineDto, MachineSortField>[] = [
@@ -128,7 +117,7 @@ export function MachinesListPage() {
           <Tooltip title="Delete">
             <IconButton
               aria-label={`Delete ${machine.name}`}
-              onClick={() => openDelete(machine)}
+              onClick={() => deletion.open(machine)}
               sx={{ width: 44, height: 44 }}
             >
               <DeleteOutline />
@@ -185,40 +174,28 @@ export function MachinesListPage() {
 
       <MachineFormDialog
         open={form.open}
-        machine={form.open ? form.machine : null}
-        onClose={() => setForm({ open: false })}
+        machine={form.machine}
+        onClose={() => setForm((current) => ({ ...current, open: false }))}
         onSaved={(machine, action) => {
-          setForm({ open: false });
+          setForm((current) => ({ ...current, open: false }));
           setNotice(`Machine "${machine.name}" ${action}.`);
         }}
       />
 
       <ConfirmDialog
-        open={toDelete !== null}
+        open={deletion.isOpen}
         title="Delete machine?"
         confirmLabel="Delete"
-        pending={deletePending}
-        error={deleteError}
-        onClose={() => setToDelete(null)}
+        pending={deletion.pending}
+        error={deletion.error}
+        onClose={deletion.close}
         onConfirm={() => void confirmDelete()}
-        message={toDelete && <DeleteMachineMessage machine={toDelete} />}
+        message={
+          deletion.target && <DeleteMachineMessage machine={deletion.target} />
+        }
       />
 
-      <Snackbar
-        open={notice !== null}
-        autoHideDuration={4000}
-        onClose={() => setNotice(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          severity="success"
-          variant="filled"
-          role="status"
-          onClose={() => setNotice(null)}
-        >
-          {notice}
-        </Alert>
-      </Snackbar>
+      <NoticeSnackbar notice={notice} onClose={() => setNotice(null)} />
     </Stack>
   );
 }

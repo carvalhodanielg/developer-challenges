@@ -1,4 +1,6 @@
 import type {
+  MonitoringPointDto,
+  MonitoringPointInput,
   MonitoringPointListItemDto,
   MonitoringPointSortField,
   Paginated,
@@ -22,4 +24,31 @@ export async function listMonitoringPoints(
     { params: query },
   );
   return data;
+}
+
+export async function createMonitoringPoint(
+  machineId: string,
+  input: MonitoringPointInput,
+): Promise<MonitoringPointDto> {
+  const { data } = await apiClient.post<MonitoringPointDto>(
+    `/machines/${machineId}/monitoring-points`,
+    input,
+  );
+  return data;
+}
+
+export async function renameMonitoringPoint(
+  id: string,
+  input: MonitoringPointInput,
+): Promise<MonitoringPointDto> {
+  const { data } = await apiClient.put<MonitoringPointDto>(
+    `/monitoring-points/${id}`,
+    input,
+  );
+  return data;
+}
+
+/** Hard delete; the database cascades to the sensor and its readings. */
+export async function deleteMonitoringPoint(id: string): Promise<void> {
+  await apiClient.delete(`/monitoring-points/${id}`);
 }

@@ -16,6 +16,7 @@ function resetApiMocks() {
   // so no response lands after a test has finished.
   const pending = () => new Promise<never>(() => undefined);
   vi.mocked(machinesApi.listMachines).mockReturnValue(pending());
+  vi.mocked(machinesApi.getMachine).mockReturnValue(pending());
   vi.mocked(monitoringPointsApi.listMonitoringPoints).mockReturnValue(
     pending(),
   );
@@ -49,7 +50,6 @@ describe('App routes', () => {
 
   it.each([
     ['/machines', 'Machines'],
-    ['/machines/0b6c2f3e-1d4a-4c8b-9f7e-2a5d6c8e9f01', 'Machine'],
     ['/monitoring-points', 'Monitoring points'],
     [
       '/monitoring-points/0b6c2f3e-1d4a-4c8b-9f7e-2a5d6c8e9f01/series',
@@ -61,6 +61,14 @@ describe('App routes', () => {
     expect(heading().textContent).toBe(title);
     expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByRole('main')).toBeTruthy();
+  });
+
+  it('opens a machine inside the layout', () => {
+    renderApp('/machines/0b6c2f3e-1d4a-4c8b-9f7e-2a5d6c8e9f01');
+    expect(
+      screen.getByRole('status', { name: 'Loading machine' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('banner')).toBeTruthy();
   });
 
   it('shows the login page at /login', () => {

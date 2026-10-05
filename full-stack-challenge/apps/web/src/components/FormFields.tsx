@@ -52,6 +52,7 @@ export function FormTextField<T extends FieldValues>({
 export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 /**
@@ -70,7 +71,11 @@ export function FormSelect<T extends FieldValues>({
       InputLabelProps={{ shrink: true }}
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value}>
+        <option
+          key={option.value}
+          value={option.value}
+          disabled={option.disabled}
+        >
           {option.label}
         </option>
       ))}

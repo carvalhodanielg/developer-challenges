@@ -1,4 +1,8 @@
-import { SensorModel } from '@dynapredict/shared-types';
+import {
+  SENSOR_SERIAL_MAX_LENGTH,
+  SENSOR_SERIAL_PATTERN,
+  SensorModel,
+} from '@dynapredict/shared-types';
 import { z } from 'zod';
 
 export const pointIdParams = z.object({ pointId: z.uuid() });
@@ -10,9 +14,9 @@ export const attachSensorSchema = z.object({
     .string()
     .trim()
     .min(1)
-    .max(64)
+    .max(SENSOR_SERIAL_MAX_LENGTH)
     .regex(
-      /^[A-Za-z0-9._-]+$/,
+      SENSOR_SERIAL_PATTERN,
       'only letters, digits, dot, dash and underscore',
     ),
   // API values: "TcAg" | "TcAs" | "HF+".

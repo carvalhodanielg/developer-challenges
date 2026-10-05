@@ -36,6 +36,9 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    // The first render of a file pays for loading MUI into jsdom, which can
+    // pass the 5 s default on a busy machine or CI runner.
+    testTimeout: 15_000,
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     includeSource: ['src/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],

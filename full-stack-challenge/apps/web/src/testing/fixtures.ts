@@ -1,4 +1,5 @@
 import type {
+  MachineDetailDto,
   MachineDto,
   MonitoringPointListItemDto,
   Paginated,
@@ -13,6 +14,20 @@ export function aMachine(overrides: Partial<MachineDto> = {}): MachineDto {
     monitoringPointsCount: 2,
     createdAt: '2026-10-01T12:00:00.000Z',
     updatedAt: '2026-10-01T12:00:00.000Z',
+    ...overrides,
+  };
+}
+
+export function aMachineDetail(
+  overrides: Partial<MachineDetailDto> = {},
+): MachineDetailDto {
+  return {
+    id: 'm-1',
+    name: 'Pump 01',
+    type: 'Pump',
+    createdAt: '2026-10-01T12:00:00.000Z',
+    updatedAt: '2026-10-01T12:00:00.000Z',
+    monitoringPoints: [],
     ...overrides,
   };
 }
