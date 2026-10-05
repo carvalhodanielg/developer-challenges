@@ -3,6 +3,7 @@ import { authReducer } from '../features/auth/authSlice';
 import { machineDetailReducer } from '../features/machines/machineDetailSlice';
 import { machinesReducer } from '../features/machines/machinesSlice';
 import { monitoringPointsReducer } from '../features/monitoringPoints/monitoringPointsSlice';
+import { readingsReducer } from '../features/readings/readingsSlice';
 import { uiReducer } from '../features/ui/uiSlice';
 
 export const rootReducer = combineReducers({
@@ -10,6 +11,7 @@ export const rootReducer = combineReducers({
   machineDetail: machineDetailReducer,
   machines: machinesReducer,
   monitoringPoints: monitoringPointsReducer,
+  readings: readingsReducer,
   ui: uiReducer,
 });
 
