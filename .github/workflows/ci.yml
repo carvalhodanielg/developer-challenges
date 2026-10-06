@@ -32,6 +32,8 @@ env:
   NODE_VERSION: 24
   NX_DAEMON: false
   NX_NO_CLOUD: true
+  # E2E runs in the cypress/included image, never on the runner (decisions #41).
+  CYPRESS_INSTALL_BINARY: 0
 
 jobs:
   lint-typecheck:

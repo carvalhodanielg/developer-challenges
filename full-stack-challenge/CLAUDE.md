@@ -23,7 +23,8 @@ npx nx test api -- -t "<test name>"            # single test by name (Vitest fil
 npx nx affected -t lint typecheck build        # same gates as CI
 npm run lint && npm run typecheck              # all projects (npm run lint:fix to autofix)
 npm run format:check                           # prettier check (npm run format to write)
-npx nx e2e web-e2e                             # Cypress (local only, not a CI gate)
+docker compose up -d --wait api web            # stack the E2E suite runs against
+npx nx e2e web-e2e                             # Cypress in Docker (local only, not a CI gate)
 npx prisma migrate dev --schema apps/api/prisma/schema.prisma
 npx prisma db seed                             # demo machines/points/sensors/readings
 docker compose up                              # full stack: postgres + api + web
@@ -45,7 +46,7 @@ Nx integrated monorepo:
   - Reusable components: `DataTable<T>`, `FormDialog`, `ConfirmDialog`, `TimeSeriesChart` (Recharts), and `MetricsCards`.
   - Forms use react-hook-form.
 - **`packages/shared-types`**: the `MachineType` and `SensorModel` enums plus DTOs, used by both apps. Prisma can't name an enum value `HF+`, so the DB stores `HFPlus` and shared-types maps it to `"HF+"` for display and the API.
-- **`apps/web-e2e`**: Cypress.
+- **`apps/web-e2e`**: Cypress. Its `e2e` target runs the `cypress/included` image against the compose stack, so there is no host Cypress binary (install with `CYPRESS_INSTALL_BINARY=0`); set `WEB_PORT`/`API_PORT` the same way for both (`decisions.md` #41).
 
 All API routes use the prefix `/api/v1`. Full endpoint list: `PLAN.md` §4.
 
