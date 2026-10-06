@@ -22,7 +22,9 @@ interface LoginFormValues {
   password: string;
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Dots split the domain into labels, so no two quantifiers compete for the
+// same characters and matching stays linear (no ReDoS backtracking).
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 export const DEFAULT_PRIVATE_PATH = '/machines';
 

@@ -74,22 +74,14 @@ type MonitoringPointRow = Awaited<
   >
 >;
 
-function toMonitoringPointDto(row: MonitoringPointRow): MonitoringPointDto {
-  return {
-    ...row,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    sensor: row.sensor && {
-      ...row.sensor,
-      model: sensorModelFromKey(row.sensor.model),
-      createdAt: row.sensor.createdAt.toISOString(),
-    },
-  };
-}
-
-function toMonitoringPointListItemDto(
+/** Both row shapes share the date and sensor fields the DTOs serialize. */
+function toMonitoringPointDto(row: MonitoringPointRow): MonitoringPointDto;
+function toMonitoringPointDto(
   row: MonitoringPointListRow,
-): MonitoringPointListItemDto {
+): MonitoringPointListItemDto;
+function toMonitoringPointDto(
+  row: MonitoringPointRow | MonitoringPointListRow,
+): MonitoringPointDto | MonitoringPointListItemDto {
   return {
     ...row,
     createdAt: row.createdAt.toISOString(),
@@ -122,7 +114,7 @@ export async function listMonitoringPoints(
     prisma.monitoringPoint.count(),
   ]);
   return {
-    data: rows.map(toMonitoringPointListItemDto),
+    data: rows.map((row) => toMonitoringPointDto(row)),
     meta: paginationMeta(query, total),
   };
 }
@@ -136,7 +128,7 @@ export async function getMonitoringPoint(
     select: monitoringPointListSelect,
   });
   if (!row) throw AppError.notFound('Monitoring point not found');
-  return toMonitoringPointListItemDto(row);
+  return toMonitoringPointDto(row);
 }
 
 export async function createMonitoringPoint(

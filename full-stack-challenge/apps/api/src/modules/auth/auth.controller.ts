@@ -13,9 +13,9 @@ export async function login(req: Request, res: Response) {
 }
 
 export function logout(_req: Request, res: Response) {
-  // clearCookie must receive the same path/sameSite/secure to match the cookie.
-  const { maxAge: _maxAge, ...clearOptions } = cookieOptions;
-  res.clearCookie(AUTH_COOKIE_NAME, clearOptions);
+  // clearCookie must receive the same path/sameSite/secure to match the
+  // cookie; Express 5 drops maxAge/expires from it on its own.
+  res.clearCookie(AUTH_COOKIE_NAME, cookieOptions);
   res.status(204).end();
 }
 

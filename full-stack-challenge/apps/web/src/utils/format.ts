@@ -38,8 +38,9 @@ const dateOnly = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
  * hours within a day, date and hour within a week, the date beyond.
  */
 export function axisTimeFormatter(spanMs: number): (epochMs: number) => string {
-  const format =
-    spanMs <= DAY_MS ? timeOnly : spanMs <= 7 * DAY_MS ? dateAndTime : dateOnly;
+  let format = dateOnly;
+  if (spanMs <= DAY_MS) format = timeOnly;
+  else if (spanMs <= 7 * DAY_MS) format = dateAndTime;
   return (epochMs) => format.format(new Date(epochMs));
 }
 

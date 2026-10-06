@@ -53,9 +53,10 @@ class Collector {
       this.readings.push({ timestamp: iso, value: number });
       return;
     }
-    this.fail(
-      `${where}: ${iso ? `invalid value "${String(value)}"` : `invalid timestamp "${String(timestamp)}"`}`,
-    );
+    const problem = iso
+      ? `invalid value "${String(value)}"`
+      : `invalid timestamp "${String(timestamp)}"`;
+    this.fail(`${where}: ${problem}`);
   }
 
   fail(message: string) {
