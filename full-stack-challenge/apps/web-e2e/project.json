@@ -12,7 +12,7 @@
       "cache": false,
       "options": {
         "cwd": "{workspaceRoot}",
-        "command": "docker run --rm --network host -e NO_COLOR=1 --user \"$(id -u):$(id -g)\" -e HOME=/tmp -e CYPRESS_BASE_URL=http://localhost:${WEB_PORT:-8080} -e CYPRESS_API_URL=http://localhost:${API_PORT:-3333}/api/v1 -v \"$PWD\":/workspace -w /workspace/apps/web-e2e cypress/included:15.21.1"
+        "command": "docker run --rm --network host -e NO_COLOR=1 -e CYPRESS_VERIFY_TIMEOUT=120000 --user \"$(id -u):$(id -g)\" -e HOME=/tmp -e CYPRESS_BASE_URL=http://localhost:${WEB_PORT:-8080} -e CYPRESS_API_URL=http://localhost:${API_PORT:-3333}/api/v1 -v \"$PWD\":/workspace -w /workspace/apps/web-e2e cypress/included:15.21.1"
       }
     },
     "typecheck": {
