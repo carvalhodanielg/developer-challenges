@@ -40,7 +40,8 @@ describe('Machines', () => {
       cy.findByText("Pump machines can't have TcAg or TcAs sensors.").should(
         'be.visible',
       );
-      cy.findByLabelText(/^name/i).clear().type(name);
+      cy.findByLabelText(/^name/i).clear();
+      cy.findByLabelText(/^name/i).type(name);
       cy.findByRole('button', { name: 'Create' }).click();
     });
     cy.get('@createMachine.all').should('have.length', 1);
@@ -52,7 +53,8 @@ describe('Machines', () => {
     cy.findByRole('button', { name: `Edit ${name}` }).click();
     dialog('Edit machine').within(() => {
       cy.findByLabelText(/^name/i).should('have.value', name);
-      cy.findByLabelText(/^name/i).clear().type(renamed);
+      cy.findByLabelText(/^name/i).clear();
+      cy.findByLabelText(/^name/i).type(renamed);
       cy.findByLabelText(/^type/i).select('Fan');
       cy.findByRole('button', { name: 'Save' }).click();
     });
@@ -114,9 +116,8 @@ describe('Machines', () => {
         'Use only letters, digits, dot, dash and underscore',
       ).should('be.visible');
 
-      cy.findByLabelText(/^serial number/i)
-        .clear()
-        .type(serial);
+      cy.findByLabelText(/^serial number/i).clear();
+      cy.findByLabelText(/^serial number/i).type(serial);
       cy.findByRole('button', { name: 'Add sensor' }).click();
     });
     cy.findByText(`Sensor ${serial} added to "Bearing DE".`).should(
