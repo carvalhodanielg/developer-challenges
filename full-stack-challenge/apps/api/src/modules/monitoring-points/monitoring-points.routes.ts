@@ -16,6 +16,11 @@ monitoringPointsRoutes.get(
   validate(listMonitoringPointsQuery, 'query'),
   monitoringPointsController.list,
 );
+monitoringPointsRoutes.get(
+  '/:id',
+  validate(monitoringPointIdParams, 'params'),
+  monitoringPointsController.get,
+);
 monitoringPointsRoutes.put(
   '/:id',
   validate(monitoringPointIdParams, 'params'),

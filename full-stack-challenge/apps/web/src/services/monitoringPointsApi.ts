@@ -26,6 +26,16 @@ export async function listMonitoringPoints(
   return data;
 }
 
+/** One point with its machine and sensor. */
+export async function getMonitoringPoint(
+  id: string,
+): Promise<MonitoringPointListItemDto> {
+  const { data } = await apiClient.get<MonitoringPointListItemDto>(
+    `/monitoring-points/${id}`,
+  );
+  return data;
+}
+
 export async function createMonitoringPoint(
   machineId: string,
   input: MonitoringPointInput,

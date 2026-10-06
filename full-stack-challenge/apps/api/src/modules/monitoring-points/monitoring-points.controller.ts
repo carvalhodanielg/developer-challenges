@@ -15,6 +15,10 @@ export async function list(req: Request, res: Response) {
   );
 }
 
+export async function get(req: Request<{ id: string }>, res: Response) {
+  res.json(await monitoringPointsService.getMonitoringPoint(req.params.id));
+}
+
 export async function create(
   req: Request<{ machineId: string }>,
   res: Response,

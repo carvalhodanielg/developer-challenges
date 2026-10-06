@@ -20,6 +20,7 @@ function resetApiMocks() {
   vi.mocked(monitoringPointsApi.listMonitoringPoints).mockReturnValue(
     pending(),
   );
+  vi.mocked(monitoringPointsApi.getMonitoringPoint).mockReturnValue(pending());
 }
 
 const signedIn: AuthState = {
@@ -51,16 +52,20 @@ describe('App routes', () => {
   it.each([
     ['/machines', 'Machines'],
     ['/monitoring-points', 'Monitoring points'],
-    [
-      '/monitoring-points/0b6c2f3e-1d4a-4c8b-9f7e-2a5d6c8e9f01/series',
-      'Time series',
-    ],
     ['/nope', 'Page not found'],
   ])('renders %s inside the layout', (route, title) => {
     renderApp(route);
     expect(heading().textContent).toBe(title);
     expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByRole('main')).toBeTruthy();
+  });
+
+  it('opens a series page inside the layout', () => {
+    renderApp('/monitoring-points/0b6c2f3e-1d4a-4c8b-9f7e-2a5d6c8e9f01/series');
+    expect(
+      screen.getByRole('status', { name: 'Loading monitoring point' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('banner')).toBeTruthy();
   });
 
   it('opens a machine inside the layout', () => {

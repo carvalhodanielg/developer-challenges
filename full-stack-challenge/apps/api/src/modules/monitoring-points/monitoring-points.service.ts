@@ -127,6 +127,18 @@ export async function listMonitoringPoints(
   };
 }
 
+/** One point with its machine and sensor, e.g. for the series page. */
+export async function getMonitoringPoint(
+  id: string,
+): Promise<MonitoringPointListItemDto> {
+  const row = await prisma.monitoringPoint.findUnique({
+    where: { id },
+    select: monitoringPointListSelect,
+  });
+  if (!row) throw AppError.notFound('Monitoring point not found');
+  return toMonitoringPointListItemDto(row);
+}
+
 export async function createMonitoringPoint(
   machineId: string,
   input: MonitoringPointInput,

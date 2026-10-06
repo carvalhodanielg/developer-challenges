@@ -1,9 +1,14 @@
+import { ThemeProvider } from '@mui/material';
 import { render, type RenderOptions } from '@testing-library/react';
 import { AxiosError, AxiosHeaders } from 'axios';
 import type { ReactElement, ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { MemoryRouter, type InitialEntry } from 'react-router-dom';
 import { setupStore, type AppStore, type RootState } from '../app/store';
+import { createAppTheme } from '../theme/createAppTheme';
+
+// The app's own theme, as App provides it (e.g. palette.chart for charts).
+const theme = createAppTheme('light');
 
 interface ProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   preloadedState?: Partial<RootState>;
@@ -11,7 +16,7 @@ interface ProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: InitialEntry;
 }
 
-/** Renders inside a fresh store and an in-memory router. */
+/** Renders inside a fresh store, the app theme and an in-memory router. */
 export function renderWithProviders(
   ui: ReactElement,
   {
@@ -24,7 +29,9 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <Provider store={store}>
-        <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+        </ThemeProvider>
       </Provider>
     );
   }

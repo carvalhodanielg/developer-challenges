@@ -256,6 +256,10 @@ export function TimeSeriesChart({
         aria-describedby={summaryId}
         sx={{
           m: 0,
+          // ResponsiveContainer re-measures a tick after a resize; until then
+          // the old width must not make the page scroll sideways.
+          overflow: 'hidden',
+          minWidth: 0,
           height: { xs: 260, md: 360 },
           opacity: loading ? 0.5 : 1,
           transition: 'opacity 150ms',

@@ -114,6 +114,7 @@ afterAll(() => prisma.$disconnect());
 describe('monitoring point routes', () => {
   it.each([
     ['GET', '/api/v1/monitoring-points'],
+    ['GET', `/api/v1/monitoring-points/${UNKNOWN_ID}`],
     ['POST', `/api/v1/machines/${UNKNOWN_ID}/monitoring-points`],
     ['PUT', `/api/v1/monitoring-points/${UNKNOWN_ID}`],
     ['DELETE', `/api/v1/monitoring-points/${UNKNOWN_ID}`],
@@ -249,6 +250,59 @@ describe('GET /api/v1/monitoring-points', () => {
     ['a page size over the maximum', { pageSize: 101 }],
   ])('rejects %s with 400', async (_, query) => {
     const res = await listPoints(query);
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/v1/monitoring-points/:id', () => {
+  function getPoint(id: string) {
+    return request(app)
+      .get(`/api/v1/monitoring-points/${id}`)
+      .set('Cookie', cookie);
+  }
+
+  it('returns the point with its machine and sensor', async () => {
+    const { machine, point } = await pointWithSensorAndReading();
+
+    const res = await getPoint(point.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      id: point.id,
+      name: 'Mancal',
+      machine: { id: machine.id, name: 'Bomba 01', type: 'Pump' },
+      sensor: {
+        id: point.sensor!.id,
+        serialNumber: 'HFP-1',
+        model: 'HF+',
+        monitoringPointId: point.id,
+        createdAt: point.sensor!.createdAt.toISOString(),
+      },
+      createdAt: point.createdAt.toISOString(),
+      updatedAt: point.updatedAt.toISOString(),
+    });
+  });
+
+  it('returns a null sensor for a point without one', async () => {
+    const machine = await createMachine();
+    const created = await createPoint(machine.id, { name: 'Carcaça' });
+
+    const res = await getPoint(created.body.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sensor).toBeNull();
+  });
+
+  it('returns 404 for an unknown point', async () => {
+    const res = await getPoint(UNKNOWN_ID);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.message).toBe('Monitoring point not found');
+  });
+
+  it('rejects an id that is not a uuid with 400', async () => {
+    const res = await getPoint('not-a-uuid');
 
     expect(res.status).toBe(400);
   });
