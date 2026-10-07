@@ -7,7 +7,8 @@ ARG NODE_IMAGE=node:24-alpine
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /workspace
 COPY package.json package-lock.json ./
-RUN npm ci
+# Builds need devDependencies even if NODE_ENV=production is passed in.
+RUN npm ci --include=dev
 
 # --- build: Vite inlines VITE_* variables at build time ---
 FROM ${NODE_IMAGE} AS build

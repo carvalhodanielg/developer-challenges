@@ -7,7 +7,9 @@ ARG NODE_IMAGE=node:24-alpine
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /workspace
 COPY package.json package-lock.json ./
-RUN npm ci
+# The build needs devDependencies (nx, prisma, typescript) even when the
+# platform passes NODE_ENV=production as a build arg, which makes npm skip them.
+RUN npm ci --include=dev
 
 # --- build: generate the Prisma client and compile the API with Nx ---
 FROM ${NODE_IMAGE} AS build
