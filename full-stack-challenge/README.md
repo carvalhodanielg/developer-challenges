@@ -2,6 +2,8 @@
 
 Solução do [Dynamox Full-Stack Developer Challenge](../full-stack-challenge.md).
 
+Aplicação publicada: https://developer-challenges-ten.vercel.app (credenciais em [Credenciais](#credenciais)).
+
 [English version below](#english)
 
 ## Português
@@ -100,6 +102,30 @@ timestamp,value
 
 O cabeçalho do CSV é opcional. Com `;` como separador, a vírgula decimal é aceita, como no Excel em pt-BR. O timestamp pode ser ISO 8601 ou epoch em milissegundos; sem fuso, vale o fuso do navegador. Arquivos grandes são enviados em lotes de 1000 leituras. Reenviar o mesmo arquivo não duplica nada.
 
+### Deploy
+
+O web roda na Vercel. A API e o Postgres rodam numa VPS da Hetzner, gerenciados pelo Coolify.
+
+O `vercel.json` repassa `/api/*` para a API, então o navegador vê uma origem só. Com isso o cookie de sessão é de primeira parte e o login funciona no Safari e em abas anônimas, que bloqueiam cookies de terceiros.
+
+API no Coolify:
+
+- Build pack Dockerfile, com base directory `/full-stack-challenge`, Dockerfile `/apps/api/Dockerfile` e porta `3333`.
+- Variáveis: `NODE_ENV=production`, `DATABASE_URL`, `AUTH_EMAIL`, `AUTH_PASSWORD_HASH`, `JWT_SECRET` (32 caracteres ou mais) e `CORS_ORIGIN` (a URL do web, sem barra no final). Nenhuma precisa estar disponível no build. Marque `AUTH_PASSWORD_HASH` como literal, senão o Coolify interpreta os `$` do hash.
+- As migrations rodam no entrypoint, antes de a API subir. O health check é `/api/v1/health`.
+
+Web na Vercel:
+
+- Root directory `full-stack-challenge`, build `npx nx build web`, output `dist/apps/web` e Node 24.
+- Variáveis: `VITE_API_URL=/api/v1` e `CYPRESS_INSTALL_BINARY=0`.
+- O destino do rewrite em `vercel.json` é o domínio da API no Coolify. Se o domínio mudar, atualize o arquivo.
+
+Para o seed, libere o acesso externo ao Postgres no Coolify, rode `npx prisma db seed` com `DATABASE_URL` apontando para ele e feche o acesso em seguida.
+
+#### Latência
+
+Rodando local, as requisições da API respondem em menos de 60 ms, bem abaixo do limite de 350 ms. Na versão publicada o tempo é maior por causa da hospedagem. A Hetzner não tem datacenter na América do Sul, então cada requisição atravessa o oceano. Além disso, o rewrite da Vercel acrescenta um salto entre o navegador e a VPS. Nas medições feitas durante o deploy, só a ida e volta até a VPS ficou em torno de 200 ms, e a primeira requisição, que ainda abre a conexão TLS, passou de 700 ms. Por isso algumas chamadas podem passar de 350 ms em produção. Uma VPS mais próxima dos usuários, ou o web e a API no mesmo provedor e região, resolveria isso sem mudar o código.
+
 ### Suposições
 
 - Há um único usuário, com email e hash bcrypt definidos por variável de ambiente. Não existe tabela de usuários, e "meus pontos" são todos os pontos do sistema.
@@ -118,6 +144,8 @@ O cabeçalho do CSV é opcional. Com `;` como separador, a vírgula decimal é a
 - Load balancer e testes de carga ficaram fora do escopo.
 
 ## English
+
+Live app: https://developer-challenges-ten.vercel.app (see [Credentials](#credentials)).
 
 An app to register machines, monitoring points and sensors, upload sensor readings as time series, and view them in a chart with metrics and a forecast.
 
@@ -212,6 +240,30 @@ timestamp,value
 ```
 
 The CSV header is optional. With `;` as the separator, a decimal comma is accepted, as pt-BR spreadsheets export it. Timestamps can be ISO 8601 or epoch milliseconds; without an offset, the browser's time zone applies. Large files go up in batches of 1000 readings. Uploading the same file twice adds nothing.
+
+### Deployment
+
+The web app runs on Vercel. The API and Postgres run on a Hetzner VPS managed by Coolify.
+
+`vercel.json` forwards `/api/*` to the API, so the browser sees a single origin. That keeps the session cookie first party, and login works in Safari and private windows, which block third-party cookies.
+
+API on Coolify:
+
+- Dockerfile build pack, with base directory `/full-stack-challenge`, Dockerfile `/apps/api/Dockerfile` and port `3333`.
+- Variables: `NODE_ENV=production`, `DATABASE_URL`, `AUTH_EMAIL`, `AUTH_PASSWORD_HASH`, `JWT_SECRET` (32 characters or more) and `CORS_ORIGIN` (the web app's URL, no trailing slash). None of them is needed at build time. Mark `AUTH_PASSWORD_HASH` as literal, or Coolify will expand the `$` signs in the hash.
+- Migrations run in the entrypoint before the API starts. The health check is `/api/v1/health`.
+
+Web on Vercel:
+
+- Root directory `full-stack-challenge`, build `npx nx build web`, output `dist/apps/web` and Node 24.
+- Variables: `VITE_API_URL=/api/v1` and `CYPRESS_INSTALL_BINARY=0`.
+- The rewrite destination in `vercel.json` is the API's Coolify domain. Update the file if that domain changes.
+
+To seed, open external access to Postgres in Coolify, run `npx prisma db seed` with `DATABASE_URL` pointing at it, and close access right after.
+
+#### Latency
+
+Locally, API requests take under 60 ms, well below the 350 ms target. The deployed version is slower because of the hosting. Hetzner has no data center in South America, so every request crosses the ocean, and the Vercel rewrite adds a hop between the browser and the VPS. In measurements taken during the deploy, the round trip to the VPS alone was around 200 ms, and the first request, which also opens the TLS connection, took over 700 ms. Some calls can therefore exceed 350 ms in production. A VPS closer to the users, or the web app and the API on the same provider and region, would fix this without code changes.
 
 ### Assumptions
 
