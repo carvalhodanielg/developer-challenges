@@ -6,6 +6,10 @@ ARG NODE_IMAGE=node:24-alpine
 # --- deps: full workspace install, cached until the lockfile changes ---
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /workspace
+# Skip the Cypress binary (~835 MB, glibc-only, unused here) and husky's git
+# hooks; the binary download alone can exhaust a small build host.
+ENV CYPRESS_INSTALL_BINARY=0 \
+    HUSKY=0
 COPY package.json package-lock.json ./
 # The build needs devDependencies (nx, prisma, typescript) even when the
 # platform passes NODE_ENV=production as a build arg, which makes npm skip them.
