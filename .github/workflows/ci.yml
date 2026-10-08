@@ -29,7 +29,6 @@ defaults:
     working-directory: full-stack-challenge
 
 env:
-  NODE_VERSION: 24
   NX_DAEMON: false
   NX_NO_CLOUD: true
   # E2E runs in the cypress/included image, never on the runner (decisions #41).
@@ -46,7 +45,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: full-stack-challenge/.nvmrc
           cache: npm
           cache-dependency-path: full-stack-challenge/package-lock.json
 
@@ -78,7 +77,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: full-stack-challenge/.nvmrc
           cache: npm
           cache-dependency-path: full-stack-challenge/package-lock.json
 
@@ -105,7 +104,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: full-stack-challenge/.nvmrc
           cache: npm
           cache-dependency-path: full-stack-challenge/package-lock.json
 
